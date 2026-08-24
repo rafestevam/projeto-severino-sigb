@@ -3,3 +3,7 @@ uvicorn[standard]
 gunicorn
 pytest
 pytest-asyncio
+sqlalchemy[asyncio]>=2.0
+asyncpg
+alembic
+python-dotenv
