@@ -1,0 +1,4 @@
+from app.adapters.repositories.models.exemplar import ExemplarModel
+from app.adapters.repositories.models.obra import ObraModel
+
+__all__ = ["ObraModel", "ExemplarModel"]

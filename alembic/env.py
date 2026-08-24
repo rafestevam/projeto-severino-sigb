@@ -13,6 +13,11 @@ from alembic import context
 # e.g. when running inside Docker where env vars are already set).
 load_dotenv()
 
+# Import models so that Base.metadata is populated before autogenerate runs.
+# Each new model module must be imported here as it is created.
+import app.adapters.repositories.models  # noqa: F401, E402
+from app.infrastructure.database import Base  # noqa: E402
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -31,9 +36,7 @@ config.set_main_option("sqlalchemy.url", database_url)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -66,7 +69,21 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    # include_name restricts autogenerate to only the tables declared in
+    # Base.metadata, preventing Alembic from seeing Keycloak's tables
+    # that coexist in the same PostgreSQL database.
+    managed_tables = set(target_metadata.tables.keys())
+
+    def include_name(name, type_, parent_names):  # noqa: ANN001
+        if type_ == "table":
+            return name in managed_tables
+        return True
+
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_name=include_name,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
