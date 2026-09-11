@@ -1,15 +1,15 @@
 """
 Testes unitários mockados para app/infrastructure/database.py.
 
-Como o módulo cria o engine assíncrono e o sessionmaker em tempo de import,
-os testes usam `unittest.mock.patch` para substituir `create_async_engine`
-e `async_sessionmaker` por dublês antes de recarregar o módulo — garantindo
-que nenhuma conexão real de banco seja aberta durante os testes.
+O módulo usa lazy initialization: `create_async_engine` e `async_sessionmaker`
+são chamados na primeira vez que o engine/sessionmaker é acessado, não no import.
+Os testes acionam essa inicialização acessando atributos dos proxies dentro do
+bloco de patch, garantindo que nenhuma conexão real de banco seja aberta.
 """
 from __future__ import annotations
 
 import importlib
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -42,6 +42,9 @@ class TestDatabaseUrlResolution:
 
             expected_url = "postgresql+asyncpg://libsys:changeme@db:5432/libsysdb"
             assert database.DATABASE_URL == expected_url
+
+            # Trigger lazy init by accessing an attribute of the proxy
+            _ = database.async_engine.url
             mock_create_engine.assert_called_once_with(expected_url)
 
     def test_usa_url_da_variavel_de_ambiente_quando_definida(self, monkeypatch) -> None:
@@ -54,6 +57,9 @@ class TestDatabaseUrlResolution:
             database = _reload_database_module()
 
             assert database.DATABASE_URL == custom_url
+
+            # Trigger lazy init
+            _ = database.async_engine.url
             mock_create_engine.assert_called_once_with(custom_url)
 
 
@@ -70,12 +76,14 @@ class TestAsyncSessionLocal:
         ) as mock_sessionmaker:
             database = _reload_database_module()
 
+            # Trigger lazy init of both engine and sessionmaker
+            _ = database.async_engine.url
+            _ = database.AsyncSessionLocal.kw
+
             mock_create_engine.assert_called_once()
             mock_sessionmaker.assert_called_once_with(
                 bind=fake_engine, class_=database.AsyncSession, expire_on_commit=False
             )
-            assert database.async_engine is fake_engine
-            assert database.AsyncSessionLocal is fake_session_local
 
 
 class TestBase:
