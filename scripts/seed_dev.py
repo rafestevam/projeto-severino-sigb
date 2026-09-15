@@ -169,8 +169,12 @@ async def seed() -> None:
         async with session.begin():
             session.add_all(OBRAS)
             session.add_all(LEITORES)
+            # Flush obras e leitores antes de adicionar exemplares (FK dependency)
+            await session.flush()
             # Exemplares dependem de obras
             session.add_all(EXEMPLARES)
+            # Flush exemplares antes de adicionar empréstimos (FK dependency)
+            await session.flush()
             # Empréstimos dependem de exemplares e leitores
             session.add_all(EMPRESTIMOS)
             # Reservas dependem de obras e leitores
