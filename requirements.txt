@@ -8,3 +8,6 @@ asyncpg
 alembic
 python-dotenv
 httpx
+qrcode[pil]
+reportlab
+Pillow
