@@ -21,3 +21,6 @@ class ExemplarRepository(ABC):
 
     @abstractmethod
     async def update_estado(self, id: UUID, estado: str) -> Exemplar | None: ...
+
+    @abstractmethod
+    async def count_all(self) -> int: ...

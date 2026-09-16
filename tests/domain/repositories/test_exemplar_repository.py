@@ -36,6 +36,9 @@ class InMemoryExemplarRepository(ExemplarRepository):
         self._store[exemplar.id] = exemplar
         return exemplar
 
+    async def count_all(self) -> int:
+        return len(self._store)
+
     async def update_estado(self, id: UUID, estado: str) -> Exemplar | None:
         exemplar = self._store.get(id)
         if exemplar is None:

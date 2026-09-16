@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.repositories.models.exemplar import ExemplarModel
@@ -68,3 +68,7 @@ class SQLAlchemyExemplarRepository(ExemplarRepository):
         await self._session.flush()
         await self._session.refresh(model)
         return _to_entity(model)
+
+    async def count_all(self) -> int:
+        result = await self._session.execute(select(func.count()).select_from(ExemplarModel))
+        return result.scalar_one()
