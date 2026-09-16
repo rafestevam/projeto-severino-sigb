@@ -8,7 +8,7 @@ from uuid import UUID
 @dataclass(slots=True)
 class Obra:
     id: UUID
-    isbn: str
+    isbn: str | None
     titulo: str
     autores: list[str]
     editora: str

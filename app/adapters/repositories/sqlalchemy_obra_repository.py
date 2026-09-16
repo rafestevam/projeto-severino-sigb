@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import Text, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.repositories.models.obra import ObraModel
@@ -56,6 +56,36 @@ class SQLAlchemyObraRepository(ObraRepository):
     async def list_all(self) -> list[Obra]:
         result = await self._session.execute(select(ObraModel))
         return [_to_entity(row) for row in result.scalars().all()]
+
+    async def list_filtered(
+        self,
+        titulo: str | None = None,
+        autor: str | None = None,
+        categoria: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Obra], int]:
+        query = select(ObraModel)
+        if titulo:
+            query = query.where(ObraModel.titulo.ilike(f"%{titulo}%"))
+        if autor:
+            query = query.where(
+                ObraModel.autores.cast(Text).ilike(f"%{autor}%")  # type: ignore[attr-defined]
+            )
+        if categoria:
+            query = query.where(ObraModel.categoria.ilike(f"%{categoria}%"))
+
+        count_result = await self._session.execute(
+            select(func.count()).select_from(query.subquery())
+        )
+        total: int = count_result.scalar_one()
+
+        offset = (page - 1) * page_size
+        rows_result = await self._session.execute(
+            query.order_by(ObraModel.created_at.desc()).offset(offset).limit(page_size)
+        )
+        obras = [_to_entity(row) for row in rows_result.scalars().all()]
+        return obras, total
 
     async def save(self, obra: Obra) -> Obra:
         model = _from_entity(obra)

@@ -38,6 +38,25 @@ class InMemoryObraRepository(ObraRepository):
         self._store[obra.id] = obra
         return obra
 
+    async def list_filtered(
+        self,
+        titulo: str | None = None,
+        autor: str | None = None,
+        categoria: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Obra], int]:
+        results = list(self._store.values())
+        if titulo:
+            results = [o for o in results if titulo.lower() in o.titulo.lower()]
+        if autor:
+            results = [o for o in results if any(autor.lower() in a.lower() for a in o.autores)]
+        if categoria:
+            results = [o for o in results if categoria.lower() in o.categoria.lower()]
+        total = len(results)
+        offset = (page - 1) * page_size
+        return results[offset : offset + page_size], total
+
     async def delete(self, id: UUID) -> None:
         self._store.pop(id, None)
 

@@ -17,6 +17,16 @@ class ObraRepository(ABC):
     async def list_all(self) -> list[Obra]: ...
 
     @abstractmethod
+    async def list_filtered(
+        self,
+        titulo: str | None = None,
+        autor: str | None = None,
+        categoria: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Obra], int]: ...
+
+    @abstractmethod
     async def save(self, obra: Obra) -> Obra: ...
 
     @abstractmethod

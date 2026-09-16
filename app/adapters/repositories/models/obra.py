@@ -16,7 +16,7 @@ class ObraModel(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    isbn: Mapped[str] = mapped_column(String(20), nullable=False)
+    isbn: Mapped[str | None] = mapped_column(String(20), nullable=True)
     titulo: Mapped[str] = mapped_column(String(512), nullable=False)
     autores: Mapped[list] = mapped_column(JSONB, nullable=False)
     editora: Mapped[str] = mapped_column(String(256), nullable=False)

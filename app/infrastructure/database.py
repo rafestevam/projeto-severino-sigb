@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
@@ -46,3 +47,9 @@ AsyncSessionLocal = _LazySessionLocal()  # type: ignore[assignment]
 
 class Base(DeclarativeBase):
     pass
+
+
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency that opens an AsyncSession and closes it after the request."""
+    async with _get_session_local()() as session:
+        yield session
