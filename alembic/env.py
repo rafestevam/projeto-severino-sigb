@@ -29,10 +29,11 @@ if config.config_file_name is not None:
 
 # DATABASE_URL (async: postgresql+asyncpg://) comes from the environment,
 # overriding whatever is set in alembic.ini.
-database_url = os.environ.get(
-    "DATABASE_URL", "postgresql+asyncpg://libsys:changeme@db:5432/libsysdb"
-)
-config.set_main_option("sqlalchemy.url", database_url)
+if not config.get_main_option("sqlalchemy.url"):
+    database_url = os.environ.get(
+        "DATABASE_URL", "postgresql+asyncpg://libsys:changeme@db:5432/libsysdb"
+    )
+    config.set_main_option("sqlalchemy.url", database_url)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

@@ -43,22 +43,13 @@ TEST_DATABASE_URL: str = os.environ.get(
     _default_url.rsplit("/", 1)[0] + "/libsysdb_test",
 )
 
-# ─── Engine e sessionmaker de teste (escopo de sessão) ───────────────────────
-_test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-_TestSessionLocal = async_sessionmaker(
-    bind=_test_engine, class_=AsyncSession, expire_on_commit=False
-)
+# ─── Engine e sessionmaker de teste ──────────────────────────────────────────
+def get_test_engine():
+    from sqlalchemy.pool import NullPool
+    return create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
 
 
 # ─── Setup do schema (uma vez por sessão pytest) ─────────────────────────────
-@pytest.fixture(scope="session")
-def event_loop():
-    """Event loop compartilhado pela sessão inteira — necessário para fixtures session-scoped."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def _create_test_schema():
     """
@@ -81,22 +72,27 @@ async def _create_test_schema():
 
     # Teardown: reverte tudo para deixar o banco limpo para a próxima execução
     await asyncio.to_thread(command.downgrade, alembic_cfg, "base")
-    await _test_engine.dispose()
 
 
 # ─── Fixture de conexão com rollback por teste ───────────────────────────────
 @pytest_asyncio.fixture()
 async def db_connection() -> AsyncGenerator[AsyncConnection, None]:
     """
-    Abre uma conexão e inicia um SAVEPOINT antes de cada teste.
+    Abre uma conexão e inicia um SAVEPOINT/transação antes de cada teste.
     O rollback ao final garante isolamento total sem re-criar o schema.
     """
-    async with _test_engine.connect() as conn:
-        await conn.begin()  # outer transaction
+    engine = get_test_engine()
+    async with engine.connect() as conn:
+        trans = await conn.begin()  # outer transaction
         try:
+            nested = await conn.begin_nested()
             yield conn
         finally:
-            await conn.rollback()
+            if nested.is_active:
+                await nested.rollback()
+            if trans.is_active:
+                await trans.rollback()
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture()
