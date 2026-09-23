@@ -5,6 +5,12 @@ Cobre:
   - DuplicateIsbnError: herança, mensagem, atributo isbn.
   - ObraNotFoundError: herança, mensagem, atributo identifier.
   - ExemplarNotFoundError: herança, mensagem, atributo identifier.
+  - ExemplarNaoDisponivelError: herança, mensagem, atributos exemplar_id e estado_atual.
+  - LeitorInativoError: herança, mensagem, atributo leitor_id.
+  - LimiteEmprestimosAtingidoError: herança, mensagem, atributos leitor_id e limite.
+  - EmprestimoNaoEncontradoError: herança, mensagem, atributo identifier.
+  - LimiteRenovacoesAtingidoError: herança, mensagem, atributos emprestimo_id e limite.
+  - EmprestimoSemAtivoPorQrError: herança, mensagem, atributo codigo_qr.
 """
 from __future__ import annotations
 
@@ -12,7 +18,13 @@ import pytest
 
 from app.domain.exceptions import (
     DuplicateIsbnError,
+    EmprestimoNaoEncontradoError,
+    EmprestimoSemAtivoPorQrError,
+    ExemplarNaoDisponivelError,
     ExemplarNotFoundError,
+    LeitorInativoError,
+    LimiteEmprestimosAtingidoError,
+    LimiteRenovacoesAtingidoError,
     ObraNotFoundError,
 )
 
@@ -133,7 +145,103 @@ class TestExemplarNotFoundError:
 
 
 # ---------------------------------------------------------------------------
-# Isolamento entre as três exceções
+# ExemplarNaoDisponivelError
+# ---------------------------------------------------------------------------
+
+
+class TestExemplarNaoDisponivelError:
+    def test_e_subclasse_de_value_error(self):
+        assert issubclass(ExemplarNaoDisponivelError, ValueError)
+
+    def test_atributos_armazenados(self):
+        exc = ExemplarNaoDisponivelError("ex-123", "emprestado")
+        assert exc.exemplar_id == "ex-123"
+        assert exc.estado_atual == "emprestado"
+        assert "ex-123" in str(exc)
+        assert "emprestado" in str(exc)
+
+
+# ---------------------------------------------------------------------------
+# LeitorInativoError
+# ---------------------------------------------------------------------------
+
+
+class TestLeitorInativoError:
+    def test_e_subclasse_de_value_error(self):
+        assert issubclass(LeitorInativoError, ValueError)
+
+    def test_atributos_armazenados(self):
+        exc = LeitorInativoError("leitor-123")
+        assert exc.leitor_id == "leitor-123"
+        assert "leitor-123" in str(exc)
+
+
+# ---------------------------------------------------------------------------
+# LimiteEmprestimosAtingidoError
+# ---------------------------------------------------------------------------
+
+
+class TestLimiteEmprestimosAtingidoError:
+    def test_e_subclasse_de_value_error(self):
+        assert issubclass(LimiteEmprestimosAtingidoError, ValueError)
+
+    def test_atributos_armazenados(self):
+        exc = LimiteEmprestimosAtingidoError("leitor-123", 3)
+        assert exc.leitor_id == "leitor-123"
+        assert exc.limite == 3
+        assert "leitor-123" in str(exc)
+        assert "3" in str(exc)
+
+
+# ---------------------------------------------------------------------------
+# EmprestimoNaoEncontradoError
+# ---------------------------------------------------------------------------
+
+
+class TestEmprestimoNaoEncontradoError:
+    def test_e_subclasse_de_value_error(self):
+        assert issubclass(EmprestimoNaoEncontradoError, ValueError)
+
+    def test_atributos_armazenados(self):
+        exc = EmprestimoNaoEncontradoError("emp-123")
+        assert exc.identifier == "emp-123"
+        assert "emp-123" in str(exc)
+
+
+# ---------------------------------------------------------------------------
+# LimiteRenovacoesAtingidoError
+# ---------------------------------------------------------------------------
+
+
+class TestLimiteRenovacoesAtingidoError:
+    def test_e_subclasse_de_value_error(self):
+        assert issubclass(LimiteRenovacoesAtingidoError, ValueError)
+
+    def test_atributos_armazenados(self):
+        exc = LimiteRenovacoesAtingidoError("emp-123", 3)
+        assert exc.emprestimo_id == "emp-123"
+        assert exc.limite == 3
+        assert "emp-123" in str(exc)
+        assert "3" in str(exc)
+
+
+# ---------------------------------------------------------------------------
+# EmprestimoSemAtivoPorQrError
+# ---------------------------------------------------------------------------
+
+
+class TestEmprestimoSemAtivoPorQrError:
+    def test_e_subclasse_de_value_error(self):
+        assert issubclass(EmprestimoSemAtivoPorQrError, ValueError)
+
+    def test_atributos_armazenados(self):
+        exc = EmprestimoSemAtivoPorQrError("QR-999")
+        assert exc.codigo_qr == "QR-999"
+        assert "QR-999" in str(exc)
+
+
+# ---------------------------------------------------------------------------
+# Isolamento entre as exceções
 # ---------------------------------------------------------------------------
 
 
