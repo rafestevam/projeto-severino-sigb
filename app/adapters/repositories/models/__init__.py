@@ -1,3 +1,4 @@
+from app.adapters.repositories.models.configuracao import ConfiguracaoModel
 from app.adapters.repositories.models.emprestimo import EmprestimoModel
 from app.adapters.repositories.models.exemplar import ExemplarModel
 from app.adapters.repositories.models.inventario_log import InventarioLogModel
@@ -12,4 +13,5 @@ __all__ = [
     "EmprestimoModel",
     "ReservaModel",
     "InventarioLogModel",
+    "ConfiguracaoModel",
 ]
