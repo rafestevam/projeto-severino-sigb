@@ -11,3 +11,4 @@ httpx
 qrcode[pil]
 reportlab
 Pillow
+apscheduler

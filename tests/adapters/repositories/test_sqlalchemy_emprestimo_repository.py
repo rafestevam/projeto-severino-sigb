@@ -95,3 +95,30 @@ class TestSQLAlchemyEmprestimoRepositoryNovosMetodos:
         assert len(items) == 1
         assert items[0].id == mock_model.id
         assert mock_session.execute.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_list_ativos_vencidos(
+        self, repo: SQLAlchemyEmprestimoRepository, mock_session: AsyncMock
+    ) -> None:
+        mock_model = MagicMock()
+        mock_model.id = uuid4()
+        mock_model.exemplar_id = uuid4()
+        mock_model.leitor_id = uuid4()
+        mock_model.data_checkout = MagicMock()
+        mock_model.data_prevista = MagicMock()
+        mock_model.data_devolucao = None
+        mock_model.renovacoes = 0
+        mock_model.status = "ativo"
+
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [mock_model]
+        mock_result.scalars.return_value = mock_scalars
+        mock_session.execute.return_value = mock_result
+
+        items = await repo.list_ativos_vencidos()
+
+        assert len(items) == 1
+        assert items[0].id == mock_model.id
+        assert items[0].status == "ativo"
+        mock_session.execute.assert_awaited_once()

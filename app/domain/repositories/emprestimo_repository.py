@@ -20,6 +20,9 @@ class EmprestimoRepository(ABC):
     async def list_ativos(self) -> list[Emprestimo]: ...
 
     @abstractmethod
+    async def list_ativos_vencidos(self) -> list[Emprestimo]: ...
+
+    @abstractmethod
     async def list_filtered(
         self,
         leitor_id: UUID | None = None,

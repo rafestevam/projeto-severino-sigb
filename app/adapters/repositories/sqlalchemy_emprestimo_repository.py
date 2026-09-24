@@ -69,6 +69,15 @@ class SQLAlchemyEmprestimoRepository(EmprestimoRepository):
         )
         return [_to_entity(row) for row in result.scalars().all()]
 
+    async def list_ativos_vencidos(self) -> list[Emprestimo]:
+        result = await self._session.execute(
+            select(EmprestimoModel).where(
+                EmprestimoModel.status == "ativo",
+                EmprestimoModel.data_prevista < func.now(),
+            )
+        )
+        return [_to_entity(row) for row in result.scalars().all()]
+
     async def list_filtered(
         self,
         leitor_id: UUID | None = None,

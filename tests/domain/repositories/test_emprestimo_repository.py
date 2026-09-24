@@ -42,6 +42,14 @@ class InMemoryEmprestimoRepository(EmprestimoRepository):
     async def list_ativos(self) -> list[Emprestimo]:
         return [e for e in self._store.values() if e.status == "ativo"]
 
+    async def list_ativos_vencidos(self) -> list[Emprestimo]:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        return [
+            e for e in self._store.values()
+            if e.status == "ativo" and e.data_prevista < now
+        ]
+
     async def list_filtered(
         self,
         leitor_id: UUID | None = None,
@@ -233,6 +241,39 @@ async def test_list_filtered(repo: InMemoryEmprestimoRepository) -> None:
     items_p2, total_p2 = await repo.list_filtered(page=2, page_size=2)
     assert total_p2 == 3
     assert len(items_p2) == 1
+
+
+async def test_list_ativos_vencidos(repo: InMemoryEmprestimoRepository) -> None:
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    vencido_ativo = make_emprestimo(
+        id=uuid4(),
+        status="ativo",
+        data_prevista=now - timedelta(days=2),
+    )
+    no_prazo_ativo = make_emprestimo(
+        id=uuid4(),
+        status="ativo",
+        data_prevista=now + timedelta(days=5),
+    )
+    vencido_devolvido = make_emprestimo(
+        id=uuid4(),
+        status="devolvido",
+        data_prevista=now - timedelta(days=2),
+    )
+    vencido_atrasado = make_emprestimo(
+        id=uuid4(),
+        status="atrasado",
+        data_prevista=now - timedelta(days=2),
+    )
+
+    for e in (vencido_ativo, no_prazo_ativo, vencido_devolvido, vencido_atrasado):
+        await repo.save(e)
+
+    result = await repo.list_ativos_vencidos()
+    assert len(result) == 1
+    assert result[0] == vencido_ativo
 
 
 async def test_abc_nao_pode_ser_instanciada_diretamente() -> None:

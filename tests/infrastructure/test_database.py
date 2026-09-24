@@ -29,6 +29,20 @@ def _restore_real_database_module():
     que nenhum estado mockado escape para outros testes/módulos."""
     yield
     _reload_database_module()
+    # Reimporta models para que fiquem registrados no metadata do Base restaurado
+    import app.adapters.repositories.models
+    importlib.reload(app.adapters.repositories.models)
+    for model_name in (
+        "configuracao",
+        "emprestimo",
+        "exemplar",
+        "inventario_log",
+        "leitor",
+        "obra",
+        "reserva",
+    ):
+        mod = importlib.import_module(f"app.adapters.repositories.models.{model_name}")
+        importlib.reload(mod)
 
 
 class TestDatabaseUrlResolution:
