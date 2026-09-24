@@ -22,15 +22,43 @@ from tests.domain.repositories.conftest import LEITOR_ID, make_emprestimo
 class InMemoryEmprestimoRepository(EmprestimoRepository):
     def __init__(self) -> None:
         self._store: dict[UUID, Emprestimo] = {}
+        self.qr_to_exemplar_id: dict[str, UUID] = {}
 
     async def get_by_id(self, id: UUID) -> Emprestimo | None:
         return self._store.get(id)
+
+    async def get_ativo_by_exemplar_qr(self, codigo_qr: str) -> Emprestimo | None:
+        exemplar_id = self.qr_to_exemplar_id.get(codigo_qr)
+        if not exemplar_id:
+            return None
+        for e in self._store.values():
+            if e.exemplar_id == exemplar_id and e.status == "ativo":
+                return e
+        return None
 
     async def list_by_leitor(self, leitor_id: UUID) -> list[Emprestimo]:
         return [e for e in self._store.values() if e.leitor_id == leitor_id]
 
     async def list_ativos(self) -> list[Emprestimo]:
         return [e for e in self._store.values() if e.status == "ativo"]
+
+    async def list_filtered(
+        self,
+        leitor_id: UUID | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Emprestimo], int]:
+        filtered = list(self._store.values())
+        if leitor_id is not None:
+            filtered = [e for e in filtered if e.leitor_id == leitor_id]
+        if status is not None:
+            filtered = [e for e in filtered if e.status == status]
+
+        total = len(filtered)
+        start = (page - 1) * page_size
+        end = start + page_size
+        return filtered[start:end], total
 
     async def save(self, emprestimo: Emprestimo) -> Emprestimo:
         self._store[emprestimo.id] = emprestimo
@@ -153,6 +181,58 @@ async def test_count_ativos_by_leitor_retorna_zero_sem_emprestimos_ativos(
 ) -> None:
     count = await repo.count_ativos_by_leitor(uuid4())
     assert count == 0
+
+
+async def test_get_ativo_by_exemplar_qr(repo: InMemoryEmprestimoRepository) -> None:
+    exemplar_id = uuid4()
+    repo.qr_to_exemplar_id["QR123"] = exemplar_id
+    emp_ativo = make_emprestimo(id=uuid4(), exemplar_id=exemplar_id, status="ativo")
+    await repo.save(emp_ativo)
+
+    res = await repo.get_ativo_by_exemplar_qr("QR123")
+    assert res == emp_ativo
+
+    res_none = await repo.get_ativo_by_exemplar_qr("QR_INEXISTENTE")
+    assert res_none is None
+
+
+async def test_list_filtered(repo: InMemoryEmprestimoRepository) -> None:
+    leitor_a = uuid4()
+    leitor_b = uuid4()
+    emp1 = make_emprestimo(id=uuid4(), leitor_id=leitor_a, status="ativo")
+    emp2 = make_emprestimo(id=uuid4(), leitor_id=leitor_a, status="devolvido")
+    emp3 = make_emprestimo(id=uuid4(), leitor_id=leitor_b, status="ativo")
+
+    for e in (emp1, emp2, emp3):
+        await repo.save(e)
+
+    # Sem filtros
+    items, total = await repo.list_filtered(page=1, page_size=20)
+    assert total == 3
+    assert len(items) == 3
+
+    # Filtro por leitor
+    items_a, total_a = await repo.list_filtered(leitor_id=leitor_a)
+    assert total_a == 2
+    assert len(items_a) == 2
+
+    # Filtro por status
+    items_ativo, total_ativo = await repo.list_filtered(status="ativo")
+    assert total_ativo == 2
+    assert len(items_ativo) == 2
+
+    # Filtro combinado
+    items_comb, total_comb = await repo.list_filtered(leitor_id=leitor_a, status="ativo")
+    assert total_comb == 1
+    assert items_comb[0] == emp1
+
+    # Paginação
+    items_p1, total_p1 = await repo.list_filtered(page=1, page_size=2)
+    assert total_p1 == 3
+    assert len(items_p1) == 2
+    items_p2, total_p2 = await repo.list_filtered(page=2, page_size=2)
+    assert total_p2 == 3
+    assert len(items_p2) == 1
 
 
 async def test_abc_nao_pode_ser_instanciada_diretamente() -> None:

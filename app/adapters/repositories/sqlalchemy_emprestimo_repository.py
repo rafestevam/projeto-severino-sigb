@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.repositories.models.emprestimo import EmprestimoModel
+from app.adapters.repositories.models.exemplar import ExemplarModel
 from app.domain.entities.emprestimo import Emprestimo
 from app.domain.repositories.emprestimo_repository import EmprestimoRepository
 
@@ -44,6 +45,18 @@ class SQLAlchemyEmprestimoRepository(EmprestimoRepository):
         model = await self._session.get(EmprestimoModel, id)
         return _to_entity(model) if model else None
 
+    async def get_ativo_by_exemplar_qr(self, codigo_qr: str) -> Emprestimo | None:
+        result = await self._session.execute(
+            select(EmprestimoModel)
+            .join(ExemplarModel, EmprestimoModel.exemplar_id == ExemplarModel.id)
+            .where(
+                ExemplarModel.codigo_qr == codigo_qr,
+                EmprestimoModel.status == "ativo",
+            )
+        )
+        model = result.scalar_one_or_none()
+        return _to_entity(model) if model else None
+
     async def list_by_leitor(self, leitor_id: UUID) -> list[Emprestimo]:
         result = await self._session.execute(
             select(EmprestimoModel).where(EmprestimoModel.leitor_id == leitor_id)
@@ -55,6 +68,34 @@ class SQLAlchemyEmprestimoRepository(EmprestimoRepository):
             select(EmprestimoModel).where(EmprestimoModel.status == "ativo")
         )
         return [_to_entity(row) for row in result.scalars().all()]
+
+    async def list_filtered(
+        self,
+        leitor_id: UUID | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Emprestimo], int]:
+        base_query = select(EmprestimoModel)
+        count_query = select(func.count()).select_from(EmprestimoModel)
+
+        if leitor_id is not None:
+            base_query = base_query.where(EmprestimoModel.leitor_id == leitor_id)
+            count_query = count_query.where(EmprestimoModel.leitor_id == leitor_id)
+
+        if status is not None:
+            base_query = base_query.where(EmprestimoModel.status == status)
+            count_query = count_query.where(EmprestimoModel.status == status)
+
+        total_result = await self._session.execute(count_query)
+        total = total_result.scalar_one()
+
+        offset = (page - 1) * page_size
+        paginated_query = base_query.offset(offset).limit(page_size)
+        result = await self._session.execute(paginated_query)
+        items = [_to_entity(row) for row in result.scalars().all()]
+
+        return items, total
 
     async def save(self, emprestimo: Emprestimo) -> Emprestimo:
         model = _from_entity(emprestimo)

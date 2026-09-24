@@ -11,10 +11,22 @@ class EmprestimoRepository(ABC):
     async def get_by_id(self, id: UUID) -> Emprestimo | None: ...
 
     @abstractmethod
+    async def get_ativo_by_exemplar_qr(self, codigo_qr: str) -> Emprestimo | None: ...
+
+    @abstractmethod
     async def list_by_leitor(self, leitor_id: UUID) -> list[Emprestimo]: ...
 
     @abstractmethod
     async def list_ativos(self) -> list[Emprestimo]: ...
+
+    @abstractmethod
+    async def list_filtered(
+        self,
+        leitor_id: UUID | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Emprestimo], int]: ...
 
     @abstractmethod
     async def save(self, emprestimo: Emprestimo) -> Emprestimo: ...
