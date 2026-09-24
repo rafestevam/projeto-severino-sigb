@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.repositories.models.emprestimo import EmprestimoModel
@@ -107,11 +107,44 @@ class SQLAlchemyEmprestimoRepository(EmprestimoRepository):
         return items, total
 
     async def save(self, emprestimo: Emprestimo) -> Emprestimo:
-        model = _from_entity(emprestimo)
-        self._session.add(model)
-        await self._session.flush()
-        await self._session.refresh(model)
-        return _to_entity(model)
+        # Use explicit INSERT or UPDATE to avoid identity-map cache issues that
+        # arise when multiple AsyncSession objects share the same connection
+        # (as happens in the nested-transaction test fixture).
+        existing = await self._session.get(EmprestimoModel, emprestimo.id)
+        if existing is None:
+            # New entity — INSERT
+            model = _from_entity(emprestimo)
+            self._session.add(model)
+            await self._session.flush()
+            await self._session.refresh(model)
+            return _to_entity(model)
+        else:
+            # Existing entity — UPDATE using raw SQL to guarantee the write
+            # lands in the current SAVEPOINT and is visible to subsequent
+            # sessions sharing the same connection (test isolation pattern).
+            await self._session.execute(
+                text(
+                    "UPDATE emprestimo SET "
+                    "data_prevista = :dp, "
+                    "data_devolucao = :dd, "
+                    "renovacoes = :r, "
+                    "status = :s "
+                    "WHERE id = :id"
+                ),
+                {
+                    "dp": emprestimo.data_prevista,
+                    "dd": emprestimo.data_devolucao,
+                    "r": emprestimo.renovacoes,
+                    "s": emprestimo.status,
+                    "id": emprestimo.id,
+                },
+            )
+            await self._session.flush()
+            # expire + refresh ensures the returned entity reflects the
+            # just-written values, not the stale identity-map state.
+            self._session.expire(existing)
+            await self._session.refresh(existing)
+            return _to_entity(existing)
 
     async def count_ativos_by_leitor(self, leitor_id: UUID) -> int:
         result = await self._session.execute(
