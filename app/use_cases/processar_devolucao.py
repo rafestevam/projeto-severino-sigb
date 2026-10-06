@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import datetime, timezone
 
@@ -9,6 +8,8 @@ from app.domain.exceptions import EmprestimoSemAtivoPorQrError
 from app.domain.gateways.notificacao_gateway import NotificacaoGateway
 from app.domain.repositories.emprestimo_repository import EmprestimoRepository
 from app.domain.repositories.exemplar_repository import ExemplarRepository
+from app.domain.repositories.leitor_repository import LeitorRepository
+from app.domain.repositories.obra_repository import ObraRepository
 from app.domain.repositories.reserva_repository import ReservaRepository
 
 logger = logging.getLogger(__name__)
@@ -25,11 +26,15 @@ class ProcessarDevolucaoUseCase:
         exemplar_repo: ExemplarRepository,
         reserva_repo: ReservaRepository,
         notificacao_gateway: NotificacaoGateway,
+        leitor_repo: LeitorRepository,
+        obra_repo: ObraRepository,
     ) -> None:
         self._emprestimo_repo = emprestimo_repo
         self._exemplar_repo = exemplar_repo
         self._reserva_repo = reserva_repo
         self._notificacao_gateway = notificacao_gateway
+        self._leitor_repo = leitor_repo
+        self._obra_repo = obra_repo
 
     async def execute(self, codigo_qr: str) -> Emprestimo:
         """
@@ -67,18 +72,25 @@ class ProcessarDevolucaoUseCase:
 
         await self._reserva_repo.update_status(reserva.id, "disponivel")
 
-        asyncio.create_task(
-            self._enviar_notificacao(
-                destino=str(reserva.leitor_id),
-                params={
-                    "reserva_id": str(reserva.id),
-                    "obra_id": str(exemplar.obra_id),
-                },
-            )
+        leitor = await self._leitor_repo.get_by_id(reserva.leitor_id)
+        if leitor is None or not leitor.telefone:
+            return
+
+        obra = await self._obra_repo.get_by_id(exemplar.obra_id)
+        titulo = obra.titulo if obra else ""
+
+        await self._enviar_notificacao(
+            destino=leitor.telefone,
+            params={
+                "leitor_id": str(leitor.id),
+                "nome": leitor.nome,
+                "titulo": titulo,
+                "reserva_id": str(reserva.id),
+            },
         )
 
     async def _enviar_notificacao(self, destino: str, params: dict) -> None:
-        """Fire-and-forget wrapper; logs errors without propagating them."""
+        """Sends the notification, logging any errors without propagating them."""
         try:
             await self._notificacao_gateway.enviar(
                 destino=destino,
