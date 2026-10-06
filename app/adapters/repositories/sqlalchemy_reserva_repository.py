@@ -72,3 +72,18 @@ class SQLAlchemyReservaRepository(ReservaRepository):
         await self._session.flush()
         await self._session.refresh(model)
         return _to_entity(model)
+
+    async def get_ativa_by_leitor_e_obra(
+        self, leitor_id: UUID, obra_id: UUID
+    ) -> Reserva | None:
+        result = await self._session.execute(
+            select(ReservaModel)
+            .where(
+                ReservaModel.leitor_id == leitor_id,
+                ReservaModel.obra_id == obra_id,
+                ReservaModel.status.in_(["aguardando", "disponivel"]),
+            )
+            .limit(1)
+        )
+        model = result.scalar_one_or_none()
+        return _to_entity(model) if model else None

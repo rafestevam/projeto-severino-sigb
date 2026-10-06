@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import func, select, text, update
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.repositories.models.emprestimo import EmprestimoModel
@@ -154,3 +155,16 @@ class SQLAlchemyEmprestimoRepository(EmprestimoRepository):
             )
         )
         return result.scalar_one()
+
+    async def list_com_vencimento_amanha(self) -> list[Emprestimo]:
+        amanha = date.today() + timedelta(days=1)
+        amanha_inicio = datetime(amanha.year, amanha.month, amanha.day, 0, 0, 0, tzinfo=timezone.utc)
+        amanha_fim = datetime(amanha.year, amanha.month, amanha.day, 23, 59, 59, tzinfo=timezone.utc)
+        result = await self._session.execute(
+            select(EmprestimoModel).where(
+                EmprestimoModel.status == "ativo",
+                EmprestimoModel.data_prevista >= amanha_inicio,
+                EmprestimoModel.data_prevista <= amanha_fim,
+            )
+        )
+        return [_to_entity(row) for row in result.scalars().all()]

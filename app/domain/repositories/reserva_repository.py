@@ -21,3 +21,8 @@ class ReservaRepository(ABC):
 
     @abstractmethod
     async def update_status(self, id: UUID, status: str) -> Reserva | None: ...
+
+    @abstractmethod
+    async def get_ativa_by_leitor_e_obra(
+        self, leitor_id: UUID, obra_id: UUID
+    ) -> Reserva | None: ...

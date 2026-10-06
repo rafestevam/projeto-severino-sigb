@@ -81,3 +81,32 @@ class EmprestimoSemAtivoPorQrError(ValueError):
     def __init__(self, codigo_qr: str) -> None:
         super().__init__(f"Nenhum empréstimo ativo encontrado para o QR Code: {codigo_qr}")
         self.codigo_qr = codigo_qr
+
+
+class ReservaNaoEncontradaError(ValueError):
+    """Raised when a reservation cannot be found by the given identifier."""
+
+    def __init__(self, identifier: str) -> None:
+        super().__init__(f"Reserva não encontrada: {identifier}")
+        self.identifier = identifier
+
+
+class ReservaJaExisteError(ValueError):
+    """Raised when the reader already has an active reservation for the same work."""
+
+    def __init__(self, obra_id: str, leitor_id: str) -> None:
+        super().__init__(
+            f"Leitor {leitor_id} já possui reserva ativa para a obra {obra_id}"
+        )
+        self.obra_id = obra_id
+        self.leitor_id = leitor_id
+
+
+class ObraComExemplarDisponivelError(ValueError):
+    """Raised when trying to reserve a work that has available copies (no need to reserve)."""
+
+    def __init__(self, obra_id: str) -> None:
+        super().__init__(
+            f"A obra {obra_id} possui exemplar disponível — realize o empréstimo diretamente"
+        )
+        self.obra_id = obra_id

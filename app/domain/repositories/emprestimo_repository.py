@@ -36,3 +36,6 @@ class EmprestimoRepository(ABC):
 
     @abstractmethod
     async def count_ativos_by_leitor(self, leitor_id: UUID) -> int: ...
+
+    @abstractmethod
+    async def list_com_vencimento_amanha(self) -> list[Emprestimo]: ...
