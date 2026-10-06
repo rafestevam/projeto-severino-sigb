@@ -255,17 +255,24 @@ class TestCheckoutEndpoint:
 class TestDevolverPorQrEndpoint:
     async def test_devolver_por_qr_sucesso_retorna_200(self, client: AsyncClient):
         import app.adapters.api.emprestimos as m
+        import app.infrastructure.whatsapp_notificacao_gateway as gw_mod
         emp = _make_emprestimo(
             status="devolvido",
             data_devolucao=datetime(2025, 1, 10, 10, 0, tzinfo=timezone.utc),
         )
-        orig = m.ProcessarDevolucaoUseCase
+        orig_uc = m.ProcessarDevolucaoUseCase
+        orig_gw = gw_mod.WhatsAppNotificacaoGateway
 
-        class _Mock:
+        class _MockGw:
+            def __init__(self, *a, **kw): pass
+            async def enviar(self, *a, **kw): pass
+
+        class _MockUc:
             def __init__(self, *a, **kw): pass
             async def execute(self, codigo_qr): return emp
 
-        m.ProcessarDevolucaoUseCase = _Mock
+        m.ProcessarDevolucaoUseCase = _MockUc
+        gw_mod.WhatsAppNotificacaoGateway = _MockGw
         try:
             resp = await client.post(
                 "/api/emprestimos/devolver-por-qr",
@@ -273,7 +280,8 @@ class TestDevolverPorQrEndpoint:
                 headers=_AUTH_HEADERS,
             )
         finally:
-            m.ProcessarDevolucaoUseCase = orig
+            m.ProcessarDevolucaoUseCase = orig_uc
+            gw_mod.WhatsAppNotificacaoGateway = orig_gw
 
         assert resp.status_code == 200
         data = resp.json()
@@ -281,14 +289,20 @@ class TestDevolverPorQrEndpoint:
 
     async def test_devolver_por_qr_sem_ativo_retorna_404(self, client: AsyncClient):
         import app.adapters.api.emprestimos as m
-        orig = m.ProcessarDevolucaoUseCase
+        import app.infrastructure.whatsapp_notificacao_gateway as gw_mod
+        orig_uc = m.ProcessarDevolucaoUseCase
+        orig_gw = gw_mod.WhatsAppNotificacaoGateway
 
-        class _Mock:
+        class _MockGw:
+            def __init__(self, *a, **kw): pass
+
+        class _MockUc:
             def __init__(self, *a, **kw): pass
             async def execute(self, codigo_qr):
                 raise EmprestimoSemAtivoPorQrError(codigo_qr)
 
-        m.ProcessarDevolucaoUseCase = _Mock
+        m.ProcessarDevolucaoUseCase = _MockUc
+        gw_mod.WhatsAppNotificacaoGateway = _MockGw
         try:
             resp = await client.post(
                 "/api/emprestimos/devolver-por-qr",
@@ -296,7 +310,8 @@ class TestDevolverPorQrEndpoint:
                 headers=_AUTH_HEADERS,
             )
         finally:
-            m.ProcessarDevolucaoUseCase = orig
+            m.ProcessarDevolucaoUseCase = orig_uc
+            gw_mod.WhatsAppNotificacaoGateway = orig_gw
 
         assert resp.status_code == 404
 
@@ -316,6 +331,7 @@ class TestDevolverPorQrEndpoint:
 class TestDevolverPorIdEndpoint:
     async def test_devolver_por_id_sucesso_retorna_200(self, client: AsyncClient):
         import app.adapters.api.emprestimos as m
+        import app.infrastructure.whatsapp_notificacao_gateway as gw_mod
         emp = _make_emprestimo()
         emp_devolvido = _make_emprestimo(
             status="devolvido",
@@ -325,6 +341,10 @@ class TestDevolverPorIdEndpoint:
         orig_emp_repo = m.SQLAlchemyEmprestimoRepository
         orig_ex_repo = m.SQLAlchemyExemplarRepository
         orig_uc = m.ProcessarDevolucaoUseCase
+        orig_gw = gw_mod.WhatsAppNotificacaoGateway
+
+        class _MockGw:
+            def __init__(self, *a, **kw): pass
 
         class _MockEmpRepo:
             def __init__(self, session): pass
@@ -344,6 +364,7 @@ class TestDevolverPorIdEndpoint:
         m.SQLAlchemyEmprestimoRepository = _MockEmpRepo
         m.SQLAlchemyExemplarRepository = _MockExRepo
         m.ProcessarDevolucaoUseCase = _MockUc
+        gw_mod.WhatsAppNotificacaoGateway = _MockGw
         try:
             resp = await client.post(
                 f"/api/emprestimos/{_EMPRESTIMO_ID}/devolver",
@@ -353,19 +374,26 @@ class TestDevolverPorIdEndpoint:
             m.SQLAlchemyEmprestimoRepository = orig_emp_repo
             m.SQLAlchemyExemplarRepository = orig_ex_repo
             m.ProcessarDevolucaoUseCase = orig_uc
+            gw_mod.WhatsAppNotificacaoGateway = orig_gw
 
         assert resp.status_code == 200
         assert resp.json()["status"] == "devolvido"
 
     async def test_devolver_por_id_emprestimo_inexistente_retorna_404(self, client: AsyncClient):
         import app.adapters.api.emprestimos as m
+        import app.infrastructure.whatsapp_notificacao_gateway as gw_mod
         orig_emp_repo = m.SQLAlchemyEmprestimoRepository
+        orig_gw = gw_mod.WhatsAppNotificacaoGateway
+
+        class _MockGw:
+            def __init__(self, *a, **kw): pass
 
         class _MockEmpRepo:
             def __init__(self, session): pass
             async def get_by_id(self, id): return None
 
         m.SQLAlchemyEmprestimoRepository = _MockEmpRepo
+        gw_mod.WhatsAppNotificacaoGateway = _MockGw
         try:
             resp = await client.post(
                 f"/api/emprestimos/{_EMPRESTIMO_ID}/devolver",
@@ -373,14 +401,20 @@ class TestDevolverPorIdEndpoint:
             )
         finally:
             m.SQLAlchemyEmprestimoRepository = orig_emp_repo
+            gw_mod.WhatsAppNotificacaoGateway = orig_gw
 
         assert resp.status_code == 404
 
     async def test_devolver_por_id_exemplar_inexistente_retorna_404(self, client: AsyncClient):
         import app.adapters.api.emprestimos as m
+        import app.infrastructure.whatsapp_notificacao_gateway as gw_mod
         emp = _make_emprestimo()
         orig_emp_repo = m.SQLAlchemyEmprestimoRepository
         orig_ex_repo = m.SQLAlchemyExemplarRepository
+        orig_gw = gw_mod.WhatsAppNotificacaoGateway
+
+        class _MockGw:
+            def __init__(self, *a, **kw): pass
 
         class _MockEmpRepo:
             def __init__(self, session): pass
@@ -392,6 +426,7 @@ class TestDevolverPorIdEndpoint:
 
         m.SQLAlchemyEmprestimoRepository = _MockEmpRepo
         m.SQLAlchemyExemplarRepository = _MockExRepo
+        gw_mod.WhatsAppNotificacaoGateway = _MockGw
         try:
             resp = await client.post(
                 f"/api/emprestimos/{_EMPRESTIMO_ID}/devolver",
@@ -400,6 +435,7 @@ class TestDevolverPorIdEndpoint:
         finally:
             m.SQLAlchemyEmprestimoRepository = orig_emp_repo
             m.SQLAlchemyExemplarRepository = orig_ex_repo
+            gw_mod.WhatsAppNotificacaoGateway = orig_gw
 
         assert resp.status_code == 404
 
