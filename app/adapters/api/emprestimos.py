@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters.api.deps import get_current_user
+from app.adapters.api.deps import get_current_user, get_notificacao_gateway
 from app.adapters.api.schemas.emprestimo import (
     CheckoutIn,
     DevolucaoQrIn,
@@ -39,8 +39,8 @@ from app.domain.exceptions import (
     LimiteEmprestimosAtingidoError,
     LimiteRenovacoesAtingidoError,
 )
+from app.domain.gateways.notificacao_gateway import NotificacaoGateway
 from app.infrastructure.database import get_db_session
-from app.infrastructure.notificacao_gateway_stub import NotificacaoGatewayStub
 from app.use_cases.listar_emprestimos import ListarEmprestimosUseCase
 from app.use_cases.processar_devolucao import ProcessarDevolucaoUseCase
 from app.use_cases.realizar_checkout import RealizarCheckoutUseCase
@@ -102,18 +102,22 @@ async def devolver_por_qr(
     body: DevolucaoQrIn,
     session: AsyncSession = Depends(get_db_session),
     _: str = Depends(get_current_user),
+    notificacao_gateway: NotificacaoGateway = Depends(get_notificacao_gateway),
 ) -> EmprestimoOut:
     """US-012 — Realiza check-in de exemplar por bipagem de QR Code."""
     emprestimo_repo = SQLAlchemyEmprestimoRepository(session)
     exemplar_repo = SQLAlchemyExemplarRepository(session)
     reserva_repo = SQLAlchemyReservaRepository(session)
-    notificacao_gateway = NotificacaoGatewayStub()
+    leitor_repo = SQLAlchemyLeitorRepository(session)
+    obra_repo = SQLAlchemyObraRepository(session)
 
     use_case = ProcessarDevolucaoUseCase(
         emprestimo_repo=emprestimo_repo,
         exemplar_repo=exemplar_repo,
         reserva_repo=reserva_repo,
         notificacao_gateway=notificacao_gateway,
+        leitor_repo=leitor_repo,
+        obra_repo=obra_repo,
     )
 
     try:
@@ -132,12 +136,14 @@ async def devolver_por_id(
     id: UUID,
     session: AsyncSession = Depends(get_db_session),
     _: str = Depends(get_current_user),
+    notificacao_gateway: NotificacaoGateway = Depends(get_notificacao_gateway),
 ) -> EmprestimoOut:
     """US-012 — Realiza devolução de empréstimo por ID (fluxo alternativo)."""
     emprestimo_repo = SQLAlchemyEmprestimoRepository(session)
     exemplar_repo = SQLAlchemyExemplarRepository(session)
     reserva_repo = SQLAlchemyReservaRepository(session)
-    notificacao_gateway = NotificacaoGatewayStub()
+    leitor_repo = SQLAlchemyLeitorRepository(session)
+    obra_repo = SQLAlchemyObraRepository(session)
 
     emprestimo = await emprestimo_repo.get_by_id(id)
     if emprestimo is None:
@@ -158,6 +164,8 @@ async def devolver_por_id(
         exemplar_repo=exemplar_repo,
         reserva_repo=reserva_repo,
         notificacao_gateway=notificacao_gateway,
+        leitor_repo=leitor_repo,
+        obra_repo=obra_repo,
     )
 
     try:
