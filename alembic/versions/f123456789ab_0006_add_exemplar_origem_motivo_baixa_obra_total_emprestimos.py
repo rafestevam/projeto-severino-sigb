@@ -40,4 +40,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    pass
+    """Remove origem and motivo_baixa from exemplar; remove total_emprestimos from obra."""
+    op.drop_column("obra", "total_emprestimos")
+    op.drop_column("exemplar", "motivo_baixa")
+    op.drop_column("exemplar", "origem")

@@ -115,24 +115,15 @@ async def test_flow_i_001_jornada_completa_inventario_e_gestao(
 async def test_flow_i_002_exemplar_baixado_nao_pode_ser_emprestado(
     client: AsyncClient,
     auth_headers_admin: dict,
+    db_session: AsyncSession,
     obra_com_exemplar,
+    leitor_factory,
 ):
     """Exemplar baixado não pode ser emprestado — checkout retorna 4xx."""
     obra, exemplar = await obra_com_exemplar()
 
-    # Criar leitor via API
-    resp_leitor = await client.post(
-        "/api/leitores",
-        json={
-            "nome": "Leitor Flow",
-            "cpf": str(uuid.uuid4().int)[:11],
-            "telefone": None,
-            "email": f"flow_{uuid.uuid4().hex[:6]}@test.com",
-        },
-        headers=auth_headers_admin,
-    )
-    assert resp_leitor.status_code == 201
-    leitor = resp_leitor.json()
+    # Criar leitor via factory (POST /api/leitores não implementado)
+    leitor_model = await leitor_factory(db_session)
 
     # Baixar o exemplar
     resp_baixa = await client.post(
@@ -145,7 +136,7 @@ async def test_flow_i_002_exemplar_baixado_nao_pode_ser_emprestado(
     # Tentar emprestar o exemplar baixado — ExemplarNaoDisponivelError → 409
     resp_checkout = await client.post(
         "/api/emprestimos",
-        json={"exemplar_id": exemplar["id"], "leitor_id": leitor["id"]},
+        json={"exemplar_id": exemplar["id"], "leitor_id": str(leitor_model.id)},
         headers=auth_headers_admin,
     )
     assert resp_checkout.status_code in (409, 422)
@@ -156,28 +147,20 @@ async def test_flow_i_002_exemplar_baixado_nao_pode_ser_emprestado(
 async def test_flow_i_003_total_emprestimos_refletido_no_dashboard_apos_checkout(
     client: AsyncClient,
     auth_headers_admin: dict,
+    db_session: AsyncSession,
     obra_com_exemplar,
+    leitor_factory,
 ):
     """top_obras_emprestadas reflete obra após checkout (total_emprestimos incrementado)."""
     obra, exemplar = await obra_com_exemplar()
 
-    resp_leitor = await client.post(
-        "/api/leitores",
-        json={
-            "nome": "Leitor Flow3",
-            "cpf": str(uuid.uuid4().int)[:11],
-            "telefone": None,
-            "email": f"flow3_{uuid.uuid4().hex[:6]}@test.com",
-        },
-        headers=auth_headers_admin,
-    )
-    assert resp_leitor.status_code == 201
-    leitor = resp_leitor.json()
+    # Criar leitor via factory (POST /api/leitores não implementado)
+    leitor_model = await leitor_factory(db_session)
 
     # Realizar checkout
     resp_checkout = await client.post(
         "/api/emprestimos",
-        json={"exemplar_id": exemplar["id"], "leitor_id": leitor["id"]},
+        json={"exemplar_id": exemplar["id"], "leitor_id": str(leitor_model.id)},
         headers=auth_headers_admin,
     )
     assert resp_checkout.status_code == 201

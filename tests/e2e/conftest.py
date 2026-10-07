@@ -129,9 +129,17 @@ async def client(db_connection: AsyncConnection) -> AsyncGenerator[AsyncClient, 
         from app.infrastructure.database import get_db_session  # noqa: F401 — importação opcional
 
         async def _override_get_db():
+            # Cria sessão vinculada à conexão transacional do teste.
+            # commit() libera o sub-savepoint criado pelo autobegin da sessão,
+            # tornando as escritas visíveis para db_session (na mesma conexão/SAVEPOINT).
+            # rollback() desfaz em caso de erro de integridade no handler HTTP.
             session = AsyncSession(bind=db_connection, expire_on_commit=False)
             try:
                 yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
             finally:
                 await session.close()
 

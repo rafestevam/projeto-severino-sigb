@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import text as _text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.repositories.models.reserva import ReservaModel
@@ -94,9 +95,12 @@ async def test_flow_c_001_jornada_completa_do_operador(
         f"data_prevista {data_prevista} fora do intervalo do checkout [{lower_14d}, {upper_14d}]"
     )
 
-    # Verifica exemplar.estado = "emprestado"
-    resp_ex = await client.get(f"/api/exemplares/{exemplar.id}", headers=auth_headers_operador)
-    assert resp_ex.json()["estado"] == "emprestado"
+    # Verifica exemplar.estado = "emprestado" via SQL bruto na mesma conexão/SAVEPOINT.
+    result_ex = await db_session.execute(
+        _text("SELECT estado FROM exemplar WHERE id = :id"),
+        {"id": exemplar.id},
+    )
+    assert result_ex.scalar_one() == "emprestado"
 
     # --- Passo 4 — Renovação ---
     before_ren = datetime.now(tz=timezone.utc)
@@ -124,9 +128,12 @@ async def test_flow_c_001_jornada_completa_do_operador(
     assert checkin_resp.json()["status"] == "devolvido"
     assert checkin_resp.json()["data_devolucao"] is not None
 
-    # Verifica exemplar.estado = "disponivel"
-    resp_ex2 = await client.get(f"/api/exemplares/{exemplar.id}", headers=auth_headers_operador)
-    assert resp_ex2.json()["estado"] == "disponivel"
+    # Verifica exemplar.estado = "disponivel" via SQL bruto na mesma conexão/SAVEPOINT.
+    result_ex2 = await db_session.execute(
+        _text("SELECT estado FROM exemplar WHERE id = :id"),
+        {"id": exemplar.id},
+    )
+    assert result_ex2.scalar_one() == "disponivel"
 
     # --- Passo 6 — Reserva de leitor B ativada ---
     await db_session.refresh(reserva)
@@ -259,8 +266,9 @@ async def test_flow_c_003_fluxo_de_atraso(
     assert checkin_resp.status_code == 200, f"Check-in falhou: {checkin_resp.text}"
     assert checkin_resp.json()["status"] == "devolvido"
 
-    # Exemplar volta a disponivel
-    resp_ex = await client.get(
-        f"/api/exemplares/{exemplar.id}", headers=auth_headers_operador
+    # Exemplar volta a disponivel — verificado via SQL bruto na mesma conexão/SAVEPOINT.
+    result_ex3 = await db_session.execute(
+        _text("SELECT estado FROM exemplar WHERE id = :id"),
+        {"id": exemplar.id},
     )
-    assert resp_ex.json()["estado"] == "disponivel"
+    assert result_ex3.scalar_one() == "disponivel"

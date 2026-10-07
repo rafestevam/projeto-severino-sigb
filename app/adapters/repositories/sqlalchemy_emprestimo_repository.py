@@ -47,12 +47,17 @@ class SQLAlchemyEmprestimoRepository(EmprestimoRepository):
         return _to_entity(model) if model else None
 
     async def get_ativo_by_exemplar_qr(self, codigo_qr: str) -> Emprestimo | None:
+        """Retorna o empréstimo não-devolvido (ativo ou atrasado) para o QR Code.
+
+        Inclui status "atrasado" pois exemplares com prazo vencido ainda precisam
+        ser devolvidos via check-in.
+        """
         result = await self._session.execute(
             select(EmprestimoModel)
             .join(ExemplarModel, EmprestimoModel.exemplar_id == ExemplarModel.id)
             .where(
                 ExemplarModel.codigo_qr == codigo_qr,
-                EmprestimoModel.status == "ativo",
+                EmprestimoModel.status.in_(["ativo", "atrasado"]),
             )
         )
         model = result.scalar_one_or_none()

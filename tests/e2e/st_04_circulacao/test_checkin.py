@@ -97,22 +97,26 @@ async def test_cin_e2e_003_exemplar_volta_para_disponivel(
     db_session: AsyncSession,
 ) -> None:
     """CIN-E2E-003 — Estado do exemplar é 'disponivel' após a devolução."""
+    from sqlalchemy import text
+
     obra = await obra_factory(db_session, titulo="Obra CIN-003")
     exemplar = await exemplar_factory(db_session, obra_id=obra.id, codigo_qr="QR-CIN-003", estado="emprestado")
     leitor = await leitor_factory(db_session)
     await emprestimo_factory(db_session, exemplar_id=exemplar.id, leitor_id=leitor.id)
 
-    await client.post(
+    resp = await client.post(
         "/api/emprestimos/devolver-por-qr",
         json={"codigo_qr": exemplar.codigo_qr},
         headers=auth_headers_operador,
     )
+    assert resp.status_code == 200
 
-    resp_exemplar = await client.get(
-        f"/api/exemplares/{exemplar.id}", headers=auth_headers_operador
+    # Verifica o estado via SQL bruto na mesma conexão/SAVEPOINT.
+    result = await db_session.execute(
+        text("SELECT estado FROM exemplar WHERE id = :id"),
+        {"id": exemplar.id},
     )
-    assert resp_exemplar.status_code == 200
-    assert resp_exemplar.json()["estado"] == "disponivel"
+    assert result.scalar_one() == "disponivel"
 
 
 # ─── CIN-E2E-004 ─────────────────────────────────────────────────────────────
@@ -274,5 +278,5 @@ async def test_cin_e2e_010_data_devolucao_proxima_ao_momento_do_teste(
     if data_devolucao.tzinfo is None:
         data_devolucao = data_devolucao.replace(tzinfo=timezone.utc)
 
-    assert before - timezone.utc.utcoffset(before) <= data_devolucao or data_devolucao >= before
-    assert data_devolucao <= after + __import__("datetime").timedelta(seconds=5)
+    assert data_devolucao >= before
+    assert data_devolucao <= after

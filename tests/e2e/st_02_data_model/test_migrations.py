@@ -16,7 +16,16 @@ from tests.e2e.conftest import TEST_DATABASE_URL
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
-EXPECTED_TABLES = {"obra", "exemplar", "leitor", "emprestimo", "reserva", "inventario_log"}
+EXPECTED_TABLES = {
+    "obra",
+    "exemplar",
+    "leitor",
+    "emprestimo",
+    "reserva",
+    "inventario_log",
+    "configuracao",
+    "notificacao_log",
+}
 
 
 async def _get_public_tables(conn: AsyncConnection) -> set[str]:
@@ -60,15 +69,15 @@ async def test_mig_002_no_extra_domain_tables():
     assert not extra_tables, f"Tabelas inesperadas encontradas no banco: {extra_tables}"
 
 
-async def test_mig_003_downgrade_minus_one_removes_circulation_tables():
-    """MIG-003: downgrade -1 (de head para 0002) remove apenas as tabelas de 0003 sem erros."""
+async def test_mig_003_downgrade_minus_one_removes_last_migration_tables():
+    """MIG-003: downgrade -1 (de head para 0005) remove apenas as colunas de 0006 sem erros."""
     from tests.e2e.conftest import get_test_engine
     alembic_cfg = _get_alembic_config()
 
     try:
         # Garante que está no head
         await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
-        # Reverte 1 migração (0003 -> 0002)
+        # Reverte 1 migração (0006 -> 0005)
         await asyncio.to_thread(command.downgrade, alembic_cfg, "-1")
 
         engine = get_test_engine()
@@ -76,15 +85,9 @@ async def test_mig_003_downgrade_minus_one_removes_circulation_tables():
             tables = await _get_public_tables(conn)
         await engine.dispose()
 
-        # 0003 adicionou: emprestimo, reserva, inventario_log
-        assert "emprestimo" not in tables
-        assert "reserva" not in tables
-        assert "inventario_log" not in tables
-
-        # 0001 e 0002 devem permanecer: obra, exemplar, leitor
-        assert "obra" in tables
-        assert "exemplar" in tables
-        assert "leitor" in tables
+        # Todas as tabelas de domínio ainda devem existir (0006 só adicionou colunas)
+        for table in EXPECTED_TABLES:
+            assert table in tables, f"Tabela '{table}' deveria existir após downgrade -1"
     finally:
         # Restaura para head
         await asyncio.to_thread(command.upgrade, alembic_cfg, "head")

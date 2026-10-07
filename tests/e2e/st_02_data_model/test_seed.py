@@ -21,19 +21,45 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 
 async def _apply_seed(session: AsyncSession):
-    """Insere os dados de seed na sessão transacional do teste criando novas instâncias."""
+    """Insere os dados de seed na sessão transacional do teste.
+
+    Usa get() → add() explícito em vez de merge() para evitar leituras
+    inconsistentes na identity-map compartilhada entre sessões (SAVEPOINT).
+    """
     for obra in OBRAS:
-        await session.merge(obra)
+        existing = await session.get(type(obra), obra.id)
+        if existing is None:
+            session.add(type(obra)(
+                **{c.key: getattr(obra, c.key) for c in obra.__mapper__.column_attrs}
+            ))
     for leitor in LEITORES:
-        await session.merge(leitor)
+        existing = await session.get(type(leitor), leitor.id)
+        if existing is None:
+            session.add(type(leitor)(
+                **{c.key: getattr(leitor, c.key) for c in leitor.__mapper__.column_attrs}
+            ))
     await session.flush()
+
     for exp in EXEMPLARES:
-        await session.merge(exp)
+        existing = await session.get(type(exp), exp.id)
+        if existing is None:
+            session.add(type(exp)(
+                **{c.key: getattr(exp, c.key) for c in exp.__mapper__.column_attrs}
+            ))
     await session.flush()
+
     for emp in EMPRESTIMOS:
-        await session.merge(emp)
+        existing = await session.get(type(emp), emp.id)
+        if existing is None:
+            session.add(type(emp)(
+                **{c.key: getattr(emp, c.key) for c in emp.__mapper__.column_attrs}
+            ))
     for res in RESERVAS:
-        await session.merge(res)
+        existing = await session.get(type(res), res.id)
+        if existing is None:
+            session.add(type(res)(
+                **{c.key: getattr(res, c.key) for c in res.__mapper__.column_attrs}
+            ))
     await session.flush()
 
 
