@@ -20,3 +20,9 @@ class ExemplarOut(BaseModel):
     estado: str
     localizacao_estante: str
     created_at: datetime
+    origem: str | None = None
+    motivo_baixa: str | None = None
+
+
+class BaixarExemplarIn(BaseModel):
+    motivo: str

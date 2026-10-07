@@ -110,3 +110,19 @@ class ObraComExemplarDisponivelError(ValueError):
             f"A obra {obra_id} possui exemplar disponível — realize o empréstimo diretamente"
         )
         self.obra_id = obra_id
+
+
+class ExemplarJaEmprestadoError(ValueError):
+    """Raised when trying to write-off an exemplar that is currently on loan."""
+
+    def __init__(self, exemplar_id: str) -> None:
+        super().__init__(f"Exemplar está emprestado e não pode ser baixado: {exemplar_id}")
+        self.exemplar_id = exemplar_id
+
+
+class ExemplarJaBaixadoError(ValueError):
+    """Raised when trying to write-off an exemplar that is already written off."""
+
+    def __init__(self, exemplar_id: str) -> None:
+        super().__init__(f"Exemplar já foi baixado anteriormente: {exemplar_id}")
+        self.exemplar_id = exemplar_id

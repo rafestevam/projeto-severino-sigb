@@ -60,6 +60,33 @@ class InMemoryObraRepository(ObraRepository):
     async def delete(self, id: UUID) -> None:
         self._store.pop(id, None)
 
+    async def count_all(self) -> int:
+        return len(self._store)
+
+    async def list_top_emprestadas(self, limit: int = 10) -> list[Obra]:
+        sorted_obras = sorted(
+            self._store.values(),
+            key=lambda o: getattr(o, "total_emprestimos", 0),
+            reverse=True,
+        )
+        return sorted_obras[:limit]
+
+    async def increment_total_emprestimos(self, obra_id: UUID) -> None:
+        obra = self._store.get(obra_id)
+        if obra is not None:
+            updated = Obra(
+                id=obra.id,
+                isbn=obra.isbn,
+                titulo=obra.titulo,
+                autores=obra.autores,
+                categoria=obra.categoria,
+                ano_publicacao=obra.ano_publicacao,
+                capa_url=obra.capa_url,
+                total_emprestimos=obra.total_emprestimos + 1,
+                created_at=obra.created_at,
+            )
+            self._store[obra_id] = updated
+
 
 # ---------------------------------------------------------------------------
 # Fixtures locais

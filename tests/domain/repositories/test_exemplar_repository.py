@@ -55,6 +55,41 @@ class InMemoryExemplarRepository(ExemplarRepository):
         self._store[id] = updated
         return updated
 
+    async def list_by_localizacao(self, localizacao: str) -> list[Exemplar]:
+        return [e for e in self._store.values() if e.localizacao_estante == localizacao]
+
+    async def update_baixa(self, id: UUID, motivo_baixa: str) -> Exemplar | None:
+        exemplar = self._store.get(id)
+        if exemplar is None:
+            return None
+        updated = Exemplar(
+            id=exemplar.id,
+            obra_id=exemplar.obra_id,
+            codigo_qr=exemplar.codigo_qr,
+            estado="baixado",
+            localizacao_estante=exemplar.localizacao_estante,
+            origem=exemplar.origem,
+            motivo_baixa=motivo_baixa,
+            created_at=exemplar.created_at,
+        )
+        self._store[id] = updated
+        return updated
+
+    async def count_by_estado(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for e in self._store.values():
+            counts[e.estado] = counts.get(e.estado, 0) + 1
+        return counts
+
+    async def count_baixados_por_motivo(self, motivo: str) -> int:
+        return sum(
+            1 for e in self._store.values()
+            if e.estado == "baixado" and e.motivo_baixa == motivo
+        )
+
+    async def count_by_origem(self, origem: str) -> int:
+        return sum(1 for e in self._store.values() if e.origem == origem)
+
 
 # ---------------------------------------------------------------------------
 # Fixtures locais

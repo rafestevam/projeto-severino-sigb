@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 
@@ -16,3 +16,4 @@ class Obra:
     capa_url: str
     categoria: str
     created_at: datetime
+    total_emprestimos: int = field(default=0)

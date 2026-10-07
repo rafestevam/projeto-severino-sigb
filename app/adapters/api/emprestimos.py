@@ -60,12 +60,14 @@ async def checkout(
     leitor_repo = SQLAlchemyLeitorRepository(session)
     emprestimo_repo = SQLAlchemyEmprestimoRepository(session)
     configuracao_service = ConfiguracaoServiceImpl(session)
+    obra_repo = SQLAlchemyObraRepository(session)
 
     use_case = RealizarCheckoutUseCase(
         exemplar_repo=exemplar_repo,
         leitor_repo=leitor_repo,
         emprestimo_repo=emprestimo_repo,
         configuracao_service=configuracao_service,
+        obra_repo=obra_repo,
     )
 
     try:

@@ -13,6 +13,7 @@ from app.domain.exceptions import (
 from app.domain.repositories.emprestimo_repository import EmprestimoRepository
 from app.domain.repositories.exemplar_repository import ExemplarRepository
 from app.domain.repositories.leitor_repository import LeitorRepository
+from app.domain.repositories.obra_repository import ObraRepository
 from app.domain.services.configuracao_service import ConfiguracaoService
 
 
@@ -25,11 +26,13 @@ class RealizarCheckoutUseCase:
         leitor_repo: LeitorRepository,
         emprestimo_repo: EmprestimoRepository,
         configuracao_service: ConfiguracaoService,
+        obra_repo: ObraRepository | None = None,
     ) -> None:
         self._exemplar_repo = exemplar_repo
         self._leitor_repo = leitor_repo
         self._emprestimo_repo = emprestimo_repo
         self._configuracao_service = configuracao_service
+        self._obra_repo = obra_repo
 
     async def execute(self, exemplar_id: UUID, leitor_id: UUID) -> Emprestimo:
         """
@@ -72,4 +75,9 @@ class RealizarCheckoutUseCase:
         )
 
         await self._exemplar_repo.update_estado(exemplar_id, "emprestado")
-        return await self._emprestimo_repo.save(emprestimo)
+        resultado = await self._emprestimo_repo.save(emprestimo)
+
+        if self._obra_repo is not None:
+            await self._obra_repo.increment_total_emprestimos(exemplar.obra_id)
+
+        return resultado

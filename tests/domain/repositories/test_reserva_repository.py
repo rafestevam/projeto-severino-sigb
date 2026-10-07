@@ -56,6 +56,14 @@ class InMemoryReservaRepository(ReservaRepository):
         self._store[id] = updated
         return updated
 
+    async def get_ativa_by_leitor_e_obra(
+        self, leitor_id: UUID, obra_id: UUID
+    ) -> Reserva | None:
+        for r in self._store.values():
+            if r.leitor_id == leitor_id and r.obra_id == obra_id and r.status in ("aguardando", "notificada"):
+                return r
+        return None
+
 
 # ---------------------------------------------------------------------------
 # Fixtures locais

@@ -78,6 +78,16 @@ class InMemoryEmprestimoRepository(EmprestimoRepository):
             if e.leitor_id == leitor_id and e.status == "ativo"
         )
 
+    async def list_com_vencimento_amanha(self) -> list[Emprestimo]:
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        amanha_inicio = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        amanha_fim = amanha_inicio + timedelta(days=1)
+        return [
+            e for e in self._store.values()
+            if e.status == "ativo" and amanha_inicio <= e.data_prevista < amanha_fim
+        ]
+
 
 # ---------------------------------------------------------------------------
 # Fixtures locais

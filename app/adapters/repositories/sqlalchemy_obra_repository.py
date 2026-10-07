@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import Text, func, select
+from sqlalchemy import Text, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.repositories.models.obra import ObraModel
@@ -21,6 +21,7 @@ def _to_entity(model: ObraModel) -> Obra:
         capa_url=model.capa_url,
         categoria=model.categoria,
         created_at=model.created_at,
+        total_emprestimos=model.total_emprestimos,
     )
 
 
@@ -35,6 +36,7 @@ def _from_entity(entity: Obra) -> ObraModel:
         capa_url=entity.capa_url,
         categoria=entity.categoria,
         created_at=entity.created_at,
+        total_emprestimos=entity.total_emprestimos,
     )
 
 
@@ -99,3 +101,22 @@ class SQLAlchemyObraRepository(ObraRepository):
         if model:
             await self._session.delete(model)
             await self._session.flush()
+
+    async def count_all(self) -> int:
+        result = await self._session.execute(select(func.count()).select_from(ObraModel))
+        return result.scalar_one()
+
+    async def list_top_emprestadas(self, limit: int = 10) -> list[Obra]:
+        result = await self._session.execute(
+            select(ObraModel)
+            .order_by(ObraModel.total_emprestimos.desc())
+            .limit(limit)
+        )
+        return [_to_entity(row) for row in result.scalars().all()]
+
+    async def increment_total_emprestimos(self, obra_id: UUID) -> None:
+        await self._session.execute(
+            text("UPDATE obra SET total_emprestimos = total_emprestimos + 1 WHERE id = :id"),
+            {"id": obra_id},
+        )
+        await self._session.flush()

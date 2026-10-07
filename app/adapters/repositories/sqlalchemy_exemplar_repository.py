@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.repositories.models.exemplar import ExemplarModel
@@ -18,6 +18,8 @@ def _to_entity(model: ExemplarModel) -> Exemplar:
         estado=model.estado,
         localizacao_estante=model.localizacao_estante,
         created_at=model.created_at,
+        origem=model.origem,
+        motivo_baixa=model.motivo_baixa,
     )
 
 
@@ -29,6 +31,8 @@ def _from_entity(entity: Exemplar) -> ExemplarModel:
         estado=entity.estado,
         localizacao_estante=entity.localizacao_estante,
         created_at=entity.created_at,
+        origem=entity.origem,
+        motivo_baixa=entity.motivo_baixa,
     )
 
 
@@ -71,4 +75,54 @@ class SQLAlchemyExemplarRepository(ExemplarRepository):
 
     async def count_all(self) -> int:
         result = await self._session.execute(select(func.count()).select_from(ExemplarModel))
+        return result.scalar_one()
+
+    async def list_by_localizacao(self, localizacao: str) -> list[Exemplar]:
+        result = await self._session.execute(
+            select(ExemplarModel).where(
+                ExemplarModel.localizacao_estante == localizacao,
+                ExemplarModel.estado == "disponivel",
+            )
+        )
+        return [_to_entity(row) for row in result.scalars().all()]
+
+    async def update_baixa(self, id: UUID, motivo_baixa: str) -> Exemplar | None:
+        await self._session.execute(
+            text(
+                "UPDATE exemplar SET estado = 'baixado', motivo_baixa = :mb WHERE id = :id"
+            ),
+            {"mb": motivo_baixa, "id": id},
+        )
+        await self._session.flush()
+        model = await self._session.get(ExemplarModel, id)
+        if model is None:
+            return None
+        self._session.expire(model)
+        await self._session.refresh(model)
+        return _to_entity(model)
+
+    async def count_by_estado(self) -> dict[str, int]:
+        result = await self._session.execute(
+            select(ExemplarModel.estado, func.count().label("total"))
+            .group_by(ExemplarModel.estado)
+        )
+        rows = result.all()
+        counts: dict[str, int] = {"disponivel": 0, "emprestado": 0, "baixado": 0}
+        for estado, total in rows:
+            counts[estado] = total
+        return counts
+
+    async def count_baixados_por_motivo(self, motivo: str) -> int:
+        result = await self._session.execute(
+            select(func.count()).where(
+                ExemplarModel.estado == "baixado",
+                ExemplarModel.motivo_baixa == motivo,
+            )
+        )
+        return result.scalar_one()
+
+    async def count_by_origem(self, origem: str) -> int:
+        result = await self._session.execute(
+            select(func.count()).where(ExemplarModel.origem == origem)
+        )
         return result.scalar_one()

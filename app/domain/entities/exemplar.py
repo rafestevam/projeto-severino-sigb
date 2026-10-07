@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
@@ -14,3 +14,5 @@ class Exemplar:
     estado: Literal["disponivel", "emprestado", "baixado"]
     localizacao_estante: str
     created_at: datetime
+    origem: str | None = field(default=None)
+    motivo_baixa: str | None = field(default=None)
