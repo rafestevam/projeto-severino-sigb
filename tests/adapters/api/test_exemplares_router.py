@@ -11,6 +11,11 @@ Cobre:
       - 404 quando o código QR não é encontrado.
       - 401 sem token de autenticação.
       - O corpo da resposta começa com a assinatura %PDF.
+  - GET /api/exemplares/by-qr/{codigo_qr}:
+      - 200 com ExemplarOut enriquecido com titulo_obra quando exemplar existe.
+      - 200 com titulo_obra=None quando obra não encontrada.
+      - 404 quando código QR não é encontrado.
+      - 401 sem token.
 """
 from __future__ import annotations
 
@@ -24,6 +29,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.adapters.api.deps import get_current_user
 from app.domain.entities.exemplar import Exemplar
+from app.domain.entities.obra import Obra
 from app.infrastructure.database import get_db_session
 from app.main import app
 
@@ -39,6 +45,20 @@ def _make_exemplar(codigo_qr: str = "LIB-2025-00001") -> Exemplar:
         codigo_qr=codigo_qr,
         estado="disponivel",
         localizacao_estante="A-01",
+        created_at=datetime(2025, 1, 1, tzinfo=timezone.utc),
+    )
+
+
+def _make_obra(titulo: str = "Dom Casmurro") -> Obra:
+    return Obra(
+        id=uuid4(),
+        isbn="9788535902778",
+        titulo=titulo,
+        autores=["Machado de Assis"],
+        editora="Ática",
+        ano=1899,
+        capa_url=None,
+        categoria="Literatura Brasileira",
         created_at=datetime(2025, 1, 1, tzinfo=timezone.utc),
     )
 
@@ -134,6 +154,19 @@ def _patch_pdf_service(pdf_bytes: bytes = _FAKE_PDF):
     return original
 
 
+def _patch_obra_repo_encontra(obra: Obra | None):
+    """Substitui SQLAlchemyObraRepository por stub que retorna a obra fornecida."""
+    import app.adapters.api.exemplares as m
+    original = m.SQLAlchemyObraRepository
+
+    class _MockObraRepo:
+        def __init__(self, *args, **kwargs): pass
+        async def get_by_id(self, id): return obra
+
+    m.SQLAlchemyObraRepository = _MockObraRepo
+    return original
+
+
 def _restore_repo(original):
     import app.adapters.api.exemplares as m
     m.SQLAlchemyExemplarRepository = original
@@ -142,6 +175,11 @@ def _restore_repo(original):
 def _restore_pdf(original):
     import app.adapters.api.exemplares as m
     m.EtiquetaPdfService = original
+
+
+def _restore_obra_repo(original):
+    import app.adapters.api.exemplares as m
+    m.SQLAlchemyObraRepository = original
 
 
 # ---------------------------------------------------------------------------
@@ -261,3 +299,83 @@ class TestGerarEtiquetaPdf:
 
         assert len(received_exemplares) == 1
         assert received_exemplares[0].codigo_qr == "LIB-2025-00099"
+
+
+# ---------------------------------------------------------------------------
+# GET /api/exemplares/by-qr/{codigo_qr}
+# ---------------------------------------------------------------------------
+
+
+class TestObterExemplarPorQr:
+    async def test_retorna_200_quando_exemplar_existe(self, client: AsyncClient):
+        """GET /api/exemplares/by-qr/{codigo_qr} retorna 200 para exemplar existente."""
+        exemplar = _make_exemplar("LIB-2025-00001")
+        obra = _make_obra("Dom Casmurro")
+        orig_repo = _patch_repo_encontra(exemplar)
+        orig_obra = _patch_obra_repo_encontra(obra)
+        try:
+            response = await client.get(
+                "/api/exemplares/by-qr/LIB-2025-00001",
+                headers=_AUTH_HEADERS,
+            )
+        finally:
+            _restore_repo(orig_repo)
+            _restore_obra_repo(orig_obra)
+
+        assert response.status_code == 200
+
+    async def test_retorna_titulo_obra_enriquecido(self, client: AsyncClient):
+        """GET /api/exemplares/by-qr/{codigo_qr} enriquece resposta com titulo_obra."""
+        exemplar = _make_exemplar("LIB-2025-00001")
+        obra = _make_obra("Dom Casmurro")
+        orig_repo = _patch_repo_encontra(exemplar)
+        orig_obra = _patch_obra_repo_encontra(obra)
+        try:
+            response = await client.get(
+                "/api/exemplares/by-qr/LIB-2025-00001",
+                headers=_AUTH_HEADERS,
+            )
+        finally:
+            _restore_repo(orig_repo)
+            _restore_obra_repo(orig_obra)
+
+        data = response.json()
+        assert data["titulo_obra"] == "Dom Casmurro"
+        assert data["codigo_qr"] == "LIB-2025-00001"
+
+    async def test_retorna_titulo_obra_none_quando_obra_nao_encontrada(
+        self, client: AsyncClient
+    ):
+        """GET /api/exemplares/by-qr/{codigo_qr} retorna titulo_obra=None se obra ausente."""
+        exemplar = _make_exemplar("LIB-2025-00001")
+        orig_repo = _patch_repo_encontra(exemplar)
+        orig_obra = _patch_obra_repo_encontra(None)
+        try:
+            response = await client.get(
+                "/api/exemplares/by-qr/LIB-2025-00001",
+                headers=_AUTH_HEADERS,
+            )
+        finally:
+            _restore_repo(orig_repo)
+            _restore_obra_repo(orig_obra)
+
+        assert response.status_code == 200
+        assert response.json()["titulo_obra"] is None
+
+    async def test_retorna_404_quando_exemplar_nao_encontrado(self, client: AsyncClient):
+        """GET /api/exemplares/by-qr/{codigo_qr} retorna 404 para QR inexistente."""
+        orig_repo = _patch_repo_nao_encontra()
+        try:
+            response = await client.get(
+                "/api/exemplares/by-qr/LIB-9999-99999",
+                headers=_AUTH_HEADERS,
+            )
+        finally:
+            _restore_repo(orig_repo)
+
+        assert response.status_code == 404
+
+    async def test_retorna_401_sem_token(self, client_sem_auth: AsyncClient):
+        """GET /api/exemplares/by-qr/{codigo_qr} sem token retorna 401."""
+        response = await client_sem_auth.get("/api/exemplares/by-qr/LIB-2025-00001")
+        assert response.status_code == 401

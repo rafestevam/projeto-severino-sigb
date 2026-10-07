@@ -22,6 +22,9 @@ from app.adapters.repositories.sqlalchemy_exemplar_repository import (
 from app.adapters.repositories.sqlalchemy_inventario_log_repository import (
     SQLAlchemyInventarioLogRepository,
 )
+from app.adapters.repositories.sqlalchemy_obra_repository import (
+    SQLAlchemyObraRepository,
+)
 from app.domain.exceptions import (
     ExemplarJaBaixadoError,
     ExemplarJaEmprestadoError,
@@ -32,6 +35,28 @@ from app.infrastructure.etiqueta_pdf_service import EtiquetaPdfService
 from app.use_cases.baixar_exemplar import BaixarExemplarUseCase
 
 exemplares_router = APIRouter(prefix="/exemplares", tags=["exemplares"])
+
+
+@exemplares_router.get("/by-qr/{codigo_qr}", response_model=ExemplarOut)
+async def obter_exemplar_por_qr(
+    codigo_qr: str,
+    session: AsyncSession = Depends(get_db_session),
+    _: str = Depends(get_current_user),
+) -> ExemplarOut:
+    """US-023 — Retorna um exemplar pelo código QR, enriquecido com titulo_obra."""
+    exemplar_repo = SQLAlchemyExemplarRepository(session)
+    exemplar = await exemplar_repo.get_by_codigo_qr(codigo_qr)
+    if exemplar is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Exemplar não encontrado: {codigo_qr}",
+        )
+    obra_repo = SQLAlchemyObraRepository(session)
+    obra = await obra_repo.get_by_id(exemplar.obra_id)
+    titulo_obra = obra.titulo if obra else None
+    out = ExemplarOut.model_validate(exemplar)
+    out.titulo_obra = titulo_obra
+    return out
 
 
 @exemplares_router.get("/{id}", response_model=ExemplarOut)

@@ -22,6 +22,7 @@ class ExemplarOut(BaseModel):
     created_at: datetime
     origem: str | None = None
     motivo_baixa: str | None = None
+    titulo_obra: str | None = None
 
 
 class BaixarExemplarIn(BaseModel):
