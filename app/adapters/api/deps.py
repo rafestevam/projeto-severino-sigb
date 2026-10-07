@@ -8,8 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.gateways.notificacao_gateway import NotificacaoGateway
 from app.infrastructure.database import get_db_session
 
+_DEV_MODE = os.getenv("DEV_MODE", "").lower() in ("1", "true", "yes")
+
 
 def get_current_user(authorization: str | None = Header(None)) -> str:
+    # Em modo de desenvolvimento, qualquer token (ou nenhum) é aceito.
+    if _DEV_MODE:
+        if authorization and authorization.startswith("Bearer "):
+            return authorization.split(" ", 1)[1]
+        return "dev-user"
+
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
