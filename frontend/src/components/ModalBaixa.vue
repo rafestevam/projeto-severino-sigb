@@ -1,40 +1,44 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('cancelar')">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
-      <h3 id="modal-titulo" class="modal-titulo">Dar Baixa no Exemplar</h3>
+  <cds-modal open size="sm" @cds-modal-closed="$emit('cancelar')">
+    <cds-modal-header>
+      <cds-modal-close-button></cds-modal-close-button>
+      <cds-modal-heading>Dar Baixa no Exemplar</cds-modal-heading>
+    </cds-modal-header>
+    <cds-modal-body>
       <p class="modal-desc">
         Exemplar: <strong>{{ codigoQr }}</strong>
       </p>
       <div class="form-field">
-        <label for="motivo-input">Motivo da baixa *</label>
-        <input
+        <cds-text-input
           id="motivo-input"
-          v-model="motivo"
-          type="text"
-          class="input"
+          label-text="Motivo da baixa *"
           placeholder="Ex: extraviado, danificado…"
+          :value="motivo"
+          @input="motivo = ($event.target as any).value"
           @keydown.enter="handleConfirmar"
-          autofocus
-        />
+          data-modal-primary-focus
+        ></cds-text-input>
       </div>
-      <div class="modal-acoes">
-        <button
-          class="btn btn-danger"
-          :disabled="!motivo.trim()"
-          @click="handleConfirmar"
-        >
-          Confirmar Baixa
-        </button>
-        <button class="btn btn-secondary" @click="$emit('cancelar')">
-          Cancelar
-        </button>
-      </div>
-    </div>
-  </div>
+    </cds-modal-body>
+    <cds-modal-footer>
+      <cds-modal-footer-button kind="secondary" @click="$emit('cancelar')">
+        Cancelar
+      </cds-modal-footer-button>
+      <cds-modal-footer-button
+        kind="danger"
+        :disabled="!motivo.trim()"
+        @click="handleConfirmar"
+      >
+        Confirmar Baixa
+      </cds-modal-footer-button>
+    </cds-modal-footer>
+  </cds-modal>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import '@carbon/web-components/es/components/modal/index.js'
+import '@carbon/web-components/es/components/text-input/index.js'
 
 defineProps<{
   codigoQr: string
@@ -54,73 +58,17 @@ function handleConfirmar() {
 }
 </script>
 
-<style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.modal {
-  background: #fff;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 420px;
-  max-width: 90vw;
-}
-
-.modal-titulo {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
+<style scoped lang="scss">
+@use '@carbon/styles/scss/spacing' as *;
+@use '@carbon/styles/scss/type' as type;
 
 .modal-desc {
-  font-size: 0.9rem;
-  color: #555;
-  margin-bottom: 1rem;
+  @include type.type-style('body-long-01');
+  color: var(--cds-text-secondary);
+  margin-bottom: $spacing-05;
 }
 
 .form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
+  margin-bottom: $spacing-05;
 }
-
-.form-field label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.95rem;
-}
-
-.modal-acoes {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
-
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-danger    { background: #c0392b; color: #fff; }
-.btn-secondary { background: #eee; color: #333; }
 </style>

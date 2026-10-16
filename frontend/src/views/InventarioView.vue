@@ -5,24 +5,36 @@
     <!-- Controles iniciais -->
     <section class="card" v-if="!store.scanAtivo && !store.divergencias">
       <div class="form-row">
-        <label class="label-inline">Localização:</label>
-        <input v-model="localizacao" type="text" class="input" placeholder="Ex: Estante A-01" />
-        <button class="btn btn-primary" @click="handleIniciarScan" :disabled="!localizacao.trim()">
+        <cds-text-input
+          class="localizacao-input"
+          label-text="Localização"
+          placeholder="Ex: Estante A-01"
+          :value="localizacao"
+          @input="localizacao = ($event.target as any).value"
+        ></cds-text-input>
+        <cds-button
+          kind="primary"
+          size="md"
+          @click="handleIniciarScan"
+          :disabled="!localizacao.trim()"
+          class="btn-iniciar"
+        >
           Iniciar Scan
-        </button>
+        </cds-button>
       </div>
       <p v-if="store.erro" class="msg-erro">{{ store.erro }}</p>
     </section>
 
     <!-- Campo de bipagem contínua -->
     <section class="card" v-if="store.scanAtivo">
-      <h2>Bipagem contínua — {{ store.codigosBipados.length }} código(s) lidos</h2>
-      <div class="form-row">
+      <h2 class="scan-title">Bipagem contínua — {{ store.codigosBipados.length }} código(s) lidos</h2>
+      <div class="form-row scanner-row">
+        <label class="label-bip">Leitor QR</label>
         <input
           ref="qrInputRef"
           type="text"
           placeholder="Aponte o leitor de QR aqui…"
-          class="qr-input"
+          class="cds--text-input qr-input"
         />
       </div>
       <ul class="codigo-list" v-if="store.codigosBipados.length > 0">
@@ -31,28 +43,28 @@
         </li>
       </ul>
       <div class="form-row btn-row">
-        <button
-          class="btn btn-success"
+        <cds-button
+          kind="primary"
           :disabled="store.loading || store.codigosBipados.length === 0"
           @click="store.processar(localizacao)"
         >
           {{ store.loading ? 'Processando…' : 'Processar Inventário' }}
-        </button>
-        <button class="btn btn-secondary" @click="store.resetar()">
+        </cds-button>
+        <cds-button kind="secondary" @click="store.resetar()">
           Cancelar
-        </button>
+        </cds-button>
       </div>
     </section>
 
     <!-- Resultados de divergências -->
     <template v-if="store.divergencias">
-      <div class="form-row btn-row" style="margin-bottom: 1rem;">
-        <button class="btn btn-secondary" @click="store.resetar()">Novo Inventário</button>
+      <div class="form-row btn-row reset-row">
+        <cds-button kind="secondary" @click="store.resetar()">Novo Inventário</cds-button>
       </div>
 
       <!-- Encontrados -->
       <section class="card">
-        <h2 class="section-ok">
+        <h2 class="section-title section-ok">
           ✓ Encontrados ({{ store.divergencias.encontrados.length }})
         </h2>
         <p v-if="store.divergencias.encontrados.length === 0" class="vazio">Nenhum.</p>
@@ -65,38 +77,41 @@
 
       <!-- Não bipados -->
       <section class="card">
-        <h2 class="section-aviso">
+        <h2 class="section-title section-aviso">
           ⚠ Não bipados ({{ store.divergencias.nao_bipados.length }})
         </h2>
         <p v-if="store.divergencias.nao_bipados.length === 0" class="vazio">Nenhum.</p>
-        <table class="tabela" v-else>
-          <thead>
-            <tr>
-              <th>Código QR</th>
-              <th>Título</th>
-              <th>Ação</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="exemplar in store.divergencias.nao_bipados" :key="exemplar.id">
-              <td>{{ exemplar.codigo_qr }}</td>
-              <td>{{ exemplar.titulo_obra ?? '—' }}</td>
-              <td>
-                <button
-                  class="btn btn-danger btn-sm"
-                  @click="abrirModalBaixa(exemplar.id, exemplar.codigo_qr)"
-                >
-                  Dar Baixa
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div v-else class="table-container">
+          <table class="cds--data-table cds--data-table--compact">
+            <thead>
+              <tr>
+                <th><span class="cds--table-header-label">Código QR</span></th>
+                <th><span class="cds--table-header-label">Título</span></th>
+                <th class="align-center"><span class="cds--table-header-label">Ação</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="exemplar in store.divergencias.nao_bipados" :key="exemplar.id">
+                <td class="codigo-item-cell">{{ exemplar.codigo_qr }}</td>
+                <td>{{ exemplar.titulo_obra ?? '—' }}</td>
+                <td class="align-center">
+                  <cds-button
+                    kind="danger"
+                    size="sm"
+                    @click="abrirModalBaixa(exemplar.id, exemplar.codigo_qr)"
+                  >
+                    Dar Baixa
+                  </cds-button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <!-- Não esperados -->
       <section class="card">
-        <h2 class="section-erro">
+        <h2 class="section-title section-erro">
           ✗ Não esperados ({{ store.divergencias.nao_esperados.length }})
         </h2>
         <p v-if="store.divergencias.nao_esperados.length === 0" class="vazio">Nenhum.</p>
@@ -122,9 +137,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive } from 'vue'
-import { useInventarioStore } from '@/stores/inventario'
 import { useQrScanner } from '@/composables/useQrScanner'
+import { useInventarioStore } from '@/stores/inventario'
 import ModalBaixa from '@/components/ModalBaixa.vue'
+import '@carbon/web-components/es/components/button/index.js'
+import '@carbon/web-components/es/components/text-input/index.js'
 
 const store = useInventarioStore()
 const localizacao = ref('')
@@ -166,129 +183,140 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@carbon/styles/scss/spacing' as *;
+@use '@carbon/styles/scss/type' as type;
+
 .inventario-view {
   max-width: 900px;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  color: #1c1c1e;
+  @include type.type-style('productive-heading-03');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-06;
+  color: var(--cds-text-primary, #161616);
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
+  background: var(--cds-layer-01, #f4f4f4);
+  border: 1px solid var(--cds-border-subtle-01, #e0e0e0);
+  padding: $spacing-05;
+  margin-bottom: $spacing-05;
 }
 
-.card h2 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
+.scan-title {
+  @include type.type-style('productive-heading-02');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-05;
+  color: var(--cds-text-primary, #161616);
 }
 
-.section-ok    { color: #155724; }
-.section-aviso { color: #856404; }
-.section-erro  { color: #721c24; }
+.section-title {
+  @include type.type-style('productive-heading-02');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-05;
+}
+
+.section-ok {
+  color: var(--cds-support-success, #24a148);
+}
+
+.section-aviso {
+  color: var(--cds-support-warning, #f1c21b);
+}
+
+.section-erro {
+  color: var(--cds-support-error, #da1e28);
+}
 
 .form-row {
   display: flex;
-  gap: 0.5rem;
-  align-items: center;
+  gap: $spacing-05;
+  align-items: flex-end;
   flex-wrap: wrap;
 }
 
-.btn-row {
-  margin-top: 0.75rem;
+.localizacao-input {
+  flex: 1;
+  min-width: 250px;
 }
 
-.input {
-  flex: 1;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.95rem;
+.scanner-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $spacing-02;
+}
+
+.label-bip {
+  @include type.type-style('label-01');
+  font-weight: type.font-weight('semibold');
+  color: var(--cds-text-secondary, #525252);
+}
+
+.btn-iniciar {
+  height: 40px;
+}
+
+.btn-row {
+  margin-top: $spacing-05;
+  gap: $spacing-04;
+}
+
+.reset-row {
+  margin-bottom: $spacing-05;
 }
 
 .qr-input {
-  flex: 1;
-  padding: 0.75rem;
-  font-size: 1.1rem;
-  border: 2px solid #4a90d9;
-  border-radius: 6px;
-}
-
-.label-inline {
-  font-size: 0.9rem;
-  font-weight: 600;
-  white-space: nowrap;
+  width: 100%;
+  padding: $spacing-05;
+  @include type.type-style('productive-heading-01');
+  border: 2px solid var(--cds-focus, #0f62fe);
 }
 
 .codigo-list {
   list-style: none;
   padding: 0;
-  margin: 0.5rem 0 0;
+  margin: $spacing-04 0 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: $spacing-03;
 }
 
 .codigo-item {
-  background: #e9ecef;
-  padding: 0.2rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-family: monospace;
+  background: var(--cds-layer-selected-01, #e0e0e0);
+  padding: $spacing-01 $spacing-03;
+  @include type.type-style('label-01');
+  font-family: type.font-family('mono');
+  color: var(--cds-text-primary, #161616);
 }
 
 .codigo-erro {
-  background: #f8d7da;
-  color: #721c24;
+  background: var(--cds-support-error-inverse, #ffb3b3);
+  color: var(--cds-support-error, #da1e28);
 }
 
-.tabela {
+.table-container {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
+  overflow-x: auto;
 }
 
-.tabela th, .tabela td {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #e0e0e0;
-  text-align: left;
+.codigo-item-cell {
+  font-family: type.font-family('mono');
 }
 
-.tabela th {
-  background: #f5f5f5;
-  font-weight: 600;
+.align-center {
+  text-align: center !important;
 }
 
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
+.vazio {
+  @include type.type-style('body-long-01');
+  color: var(--cds-text-placeholder, #a8a8a8);
 }
-
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-sm       { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
-.btn-primary   { background: #4a90d9; color: #fff; }
-.btn-success   { background: #27ae60; color: #fff; }
-.btn-danger    { background: #c0392b; color: #fff; }
-.btn-secondary { background: #eee; color: #333; }
-
-.vazio { font-size: 0.9rem; color: #888; }
 
 .msg-erro {
-  color: #c0392b;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
+  @include type.type-style('body-long-01');
+  color: var(--cds-support-error, #da1e28);
+  margin-top: $spacing-03;
 }
 </style>

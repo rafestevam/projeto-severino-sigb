@@ -9,7 +9,7 @@
         ref="qrInputRef"
         type="text"
         placeholder="Aponte o leitor de QR aqui…"
-        class="qr-input"
+        class="cds--text-input qr-input"
         :disabled="store.loading"
         aria-label="Campo de leitura QR para devolução"
       />
@@ -65,90 +65,98 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@carbon/styles/scss/spacing' as *;
+@use '@carbon/styles/scss/type' as type;
+
 .checkin-view {
   max-width: 700px;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-  color: #1c1c1e;
+  @include type.type-style('productive-heading-03');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-02;
+  color: var(--cds-text-primary, #161616);
 }
 
 .subtitle {
-  color: #666;
-  margin-bottom: 1.5rem;
+  @include type.type-style('body-long-01');
+  color: var(--cds-text-secondary, #525252);
+  margin-bottom: $spacing-06;
 }
 
 .scan-area {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  gap: $spacing-05;
+  margin-bottom: $spacing-06;
 }
 
 .qr-input {
   flex: 1;
-  padding: 1rem;
-  font-size: 1.25rem;
-  border: 2px solid #4a90d9;
-  border-radius: 8px;
+  padding: $spacing-05;
+  @include type.type-style('productive-heading-01');
+  border: 2px solid var(--cds-focus, #0f62fe);
   outline: none;
 }
 
-.qr-input:focus {
-  border-color: #1e6ec8;
-  box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.2);
-}
-
 .loading-badge {
-  font-size: 0.9rem;
-  color: #888;
+  @include type.type-style('body-long-01');
+  color: var(--cds-text-secondary);
   font-style: italic;
 }
 
 .feedback {
   display: flex;
-  gap: 1rem;
+  gap: $spacing-05;
   align-items: flex-start;
-  padding: 1.25rem 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  padding: $spacing-05 $spacing-06;
+  border-radius: 4px;
+  margin-bottom: $spacing-05;
 }
 
 .feedback-sucesso {
-  background: #d4edda;
-  border: 2px solid #27ae60;
+  background: var(--cds-notification-success-background, #def8e9);
+  border: 2px solid var(--cds-support-success, #24a148);
 }
 
 .feedback-erro {
-  background: #f8d7da;
-  border: 2px solid #c0392b;
+  background: var(--cds-notification-error-background, #fff0f0);
+  border: 2px solid var(--cds-support-error, #da1e28);
 }
 
 .feedback-icon {
-  font-size: 2.5rem;
-  font-weight: 900;
+  @include type.type-style('productive-heading-06');
+  font-weight: type.font-weight('semibold');
   line-height: 1;
 }
 
-.feedback-sucesso .feedback-icon { color: #155724; }
-.feedback-erro .feedback-icon { color: #721c24; }
-
-.feedback-titulo {
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 0.35rem;
+.feedback-sucesso .feedback-icon {
+  color: var(--cds-support-success, #24a148);
 }
 
-.feedback-sucesso .feedback-titulo { color: #155724; }
-.feedback-erro .feedback-titulo { color: #721c24; }
+.feedback-erro .feedback-icon {
+  color: var(--cds-support-error, #da1e28);
+}
+
+.feedback-titulo {
+  @include type.type-style('productive-heading-02');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-03;
+}
+
+.feedback-sucesso .feedback-titulo {
+  color: var(--cds-support-success, #24a148);
+}
+
+.feedback-erro .feedback-titulo {
+  color: var(--cds-support-error, #da1e28);
+}
 
 .feedback-detalhe {
-  font-size: 1rem;
-  color: #333;
-  margin: 0.1rem 0;
+  @include type.type-style('body-long-01');
+  color: var(--cds-text-primary, #161616);
+  margin: $spacing-01 0;
 }
 </style>

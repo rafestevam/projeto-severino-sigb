@@ -7,47 +7,65 @@
 
     <template v-else-if="store.metricas">
       <!-- Cards de totais -->
-      <div class="cards-grid">
-        <div class="card card-stat">
-          <div class="card-value">{{ store.metricas.total_obras }}</div>
-          <div class="card-label">Obras no acervo</div>
-        </div>
-        <div class="card card-stat">
-          <div class="card-value">{{ store.metricas.total_exemplares }}</div>
-          <div class="card-label">Total de exemplares</div>
-        </div>
-        <div class="card card-stat">
-          <div class="card-value">{{ store.metricas.total_leitores_ativos }}</div>
-          <div class="card-label">Leitores ativos</div>
-        </div>
-        <div class="card card-stat">
-          <div class="card-value">{{ store.metricas.total_doacoes }}</div>
-          <div class="card-label">Doações recebidas</div>
+      <div class="cds--grid cds--grid--narrow grid-section">
+        <div class="cds--row">
+          <div class="cds--col-sm-2 cds--col-md-4 cds--col-lg-4">
+            <div class="card card-stat">
+              <div class="card-value">{{ store.metricas.total_obras }}</div>
+              <div class="card-label">Obras no acervo</div>
+            </div>
+          </div>
+          <div class="cds--col-sm-2 cds--col-md-4 cds--col-lg-4">
+            <div class="card card-stat">
+              <div class="card-value">{{ store.metricas.total_exemplares }}</div>
+              <div class="card-label">Total de exemplares</div>
+            </div>
+          </div>
+          <div class="cds--col-sm-2 cds--col-md-4 cds--col-lg-4">
+            <div class="card card-stat">
+              <div class="card-value">{{ store.metricas.total_leitores_ativos }}</div>
+              <div class="card-label">Leitores ativos</div>
+            </div>
+          </div>
+          <div class="cds--col-sm-2 cds--col-md-4 cds--col-lg-4">
+            <div class="card card-stat">
+              <div class="card-value">{{ store.metricas.total_doacoes }}</div>
+              <div class="card-label">Doações recebidas</div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Exemplares por estado -->
-      <section class="card">
-        <h2>Exemplares por Estado</h2>
-        <div class="cards-grid cards-grid-3">
-          <div class="card card-stat card-disponivel">
-            <div class="card-value">{{ store.metricas.exemplares_por_estado.disponivel }}</div>
-            <div class="card-label">Disponíveis</div>
-          </div>
-          <div class="card card-stat card-emprestado">
-            <div class="card-value">{{ store.metricas.exemplares_por_estado.emprestado }}</div>
-            <div class="card-label">Emprestados</div>
-          </div>
-          <div class="card card-stat card-baixado">
-            <div class="card-value">{{ store.metricas.exemplares_por_estado.baixado }}</div>
-            <div class="card-label">Baixados</div>
+      <section class="card section-card">
+        <h2 class="section-title">Exemplares por Estado</h2>
+        <div class="cds--grid cds--grid--narrow">
+          <div class="cds--row">
+            <div class="cds--col-sm-4 cds--col-md-4 cds--col-lg-4">
+              <div class="card card-stat card-disponivel">
+                <div class="card-value">{{ store.metricas.exemplares_por_estado.disponivel }}</div>
+                <div class="card-label">Disponíveis</div>
+              </div>
+            </div>
+            <div class="cds--col-sm-4 cds--col-md-4 cds--col-lg-4">
+              <div class="card card-stat card-emprestado">
+                <div class="card-value">{{ store.metricas.exemplares_por_estado.emprestado }}</div>
+                <div class="card-label">Emprestados</div>
+              </div>
+            </div>
+            <div class="cds--col-sm-4 cds--col-md-4 cds--col-lg-4">
+              <div class="card card-stat card-baixado">
+                <div class="card-value">{{ store.metricas.exemplares_por_estado.baixado }}</div>
+                <div class="card-label">Baixados</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- Indicadores de perdas -->
-      <section class="card">
-        <h2>Indicadores</h2>
+      <section class="card section-card">
+        <h2 class="section-title">Indicadores</h2>
         <div class="indicadores">
           <div class="indicador">
             <span class="indicador-label">Taxa de perdas:</span>
@@ -59,30 +77,32 @@
       </section>
 
       <!-- Top 10 obras mais emprestadas -->
-      <section class="card">
-        <h2>Top 10 Obras Mais Emprestadas</h2>
+      <section class="card section-card">
+        <h2 class="section-title">Top 10 Obras Mais Emprestadas</h2>
         <p v-if="store.metricas.top_obras_emprestadas.length === 0" class="vazio">
           Nenhum dado disponível.
         </p>
-        <table class="tabela" v-else>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Título</th>
-              <th>Empréstimos</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(obra, idx) in store.metricas.top_obras_emprestadas"
-              :key="obra.obra_id"
-            >
-              <td class="rank">{{ idx + 1 }}</td>
-              <td>{{ obra.titulo }}</td>
-              <td class="count">{{ obra.total_emprestimos }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div v-else class="table-container">
+          <table class="cds--data-table cds--data-table--compact">
+            <thead>
+              <tr>
+                <th><span class="cds--table-header-label">#</span></th>
+                <th><span class="cds--table-header-label">Título</span></th>
+                <th class="align-right"><span class="cds--table-header-label">Empréstimos</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(obra, idx) in store.metricas.top_obras_emprestadas"
+                :key="obra.obra_id"
+              >
+                <td class="rank">{{ idx + 1 }}</td>
+                <td class="titulo-cell">{{ obra.titulo }}</td>
+                <td class="count">{{ obra.total_emprestimos }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </template>
   </div>
@@ -99,112 +119,142 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@carbon/styles/scss/spacing' as *;
+@use '@carbon/styles/scss/type' as type;
+
 .dashboard-view {
   max-width: 900px;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  color: #1c1c1e;
+  @include type.type-style('productive-heading-03');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-06;
+  color: var(--cds-text-primary, #161616);
 }
 
 .loading {
-  color: #666;
+  @include type.type-style('body-long-01');
+  color: var(--cds-text-secondary);
   font-style: italic;
-  padding: 2rem 0;
+  padding: $spacing-07 0;
 }
 
-.cards-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.cards-grid-3 {
-  grid-template-columns: repeat(3, 1fr);
+.grid-section {
+  padding: 0;
+  margin-bottom: $spacing-05;
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
+  background: var(--cds-layer-01, #f4f4f4);
+  border: 1px solid var(--cds-border-subtle-01, #e0e0e0);
+  padding: $spacing-05;
+  margin-bottom: $spacing-05;
 }
 
-.card h2 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-  color: #555;
+.section-card {
+  border: 1px solid var(--cds-border-subtle-01, #e0e0e0);
+  background: var(--cds-layer-01, #f4f4f4);
+}
+
+.section-title {
+  @include type.type-style('productive-heading-02');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-05;
+  color: var(--cds-text-secondary, #525252);
 }
 
 .card-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 1.25rem 0.75rem;
+  padding: $spacing-06 $spacing-04;
   margin-bottom: 0;
+  min-height: 120px;
+  background: var(--cds-layer-02, #ffffff);
 }
 
 .card-value {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #1c1c1e;
+  @include type.type-style('productive-heading-05');
+  font-weight: type.font-weight('semibold');
+  color: var(--cds-text-primary, #161616);
 }
 
 .card-label {
-  font-size: 0.8rem;
-  color: #666;
-  margin-top: 0.25rem;
+  @include type.type-style('label-01');
+  color: var(--cds-text-secondary, #525252);
+  margin-top: $spacing-02;
 }
 
-.card-disponivel .card-value { color: #27ae60; }
-.card-emprestado .card-value { color: #4a90d9; }
-.card-baixado .card-value    { color: #c0392b; }
+.card-disponivel .card-value {
+  color: var(--cds-support-success, #24a148);
+}
+
+.card-emprestado .card-value {
+  color: var(--cds-support-info, #0f62fe);
+}
+
+.card-baixado .card-value {
+  color: var(--cds-support-error, #da1e28);
+}
 
 .indicadores {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: $spacing-03;
 }
 
 .indicador {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 0.95rem;
+  gap: $spacing-04;
 }
 
-.indicador-label { color: #555; }
-.indicador-valor { font-weight: 700; font-size: 1.1rem; color: #1c1c1e; }
+.indicador-label {
+  @include type.type-style('body-long-01');
+  color: var(--cds-text-secondary, #525252);
+}
 
-.tabela {
+.indicador-valor {
+  @include type.type-style('productive-heading-01');
+  font-weight: type.font-weight('semibold');
+  color: var(--cds-text-primary, #161616);
+}
+
+.table-container {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
+  overflow-x: auto;
 }
 
-.tabela th, .tabela td {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #e0e0e0;
-  text-align: left;
+.align-right {
+  text-align: right !important;
 }
 
-.tabela th {
-  background: #f5f5f5;
-  font-weight: 600;
+.titulo-cell {
+  @include type.type-style('body-long-01');
 }
 
-.rank  { width: 40px; text-align: center; color: #888; }
-.count { text-align: right; font-weight: 700; }
+.rank {
+  width: 40px;
+  text-align: center;
+  color: var(--cds-text-placeholder, #a8a8a8);
+}
 
-.vazio { font-size: 0.9rem; color: #888; }
+.count {
+  text-align: right;
+  font-weight: type.font-weight('semibold');
+}
+
+.vazio {
+  @include type.type-style('body-long-01');
+  color: var(--cds-text-placeholder, #a8a8a8);
+}
 
 .msg-erro {
-  color: #c0392b;
-  font-size: 0.9rem;
+  @include type.type-style('body-long-01');
+  color: var(--cds-support-error, #da1e28);
 }
 </style>

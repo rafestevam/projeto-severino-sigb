@@ -4,97 +4,133 @@
 
     <!-- Busca de ISBN -->
     <section class="card">
-      <h2>Buscar por ISBN (opcional)</h2>
-      <div class="form-row">
-        <input
-          ref="isbnInputRef"
-          v-model="isbn"
-          type="text"
-          placeholder="ISBN (bipe ou digite)"
-          class="input"
-          :disabled="store.loading"
-        />
-        <button
-          class="btn btn-primary"
-          :disabled="store.loading || !isbn.trim()"
-          @click="handleBuscarIsbn"
-        >
-          {{ store.loading ? 'Buscando…' : 'Buscar' }}
-        </button>
+      <h2 class="section-title">Buscar por ISBN (opcional)</h2>
+      <div class="form-row scanner-row">
+        <label class="label-bip">ISBN (bipe ou digite)</label>
+        <div class="input-and-button">
+          <input
+            ref="isbnInputRef"
+            v-model="isbn"
+            type="text"
+            placeholder="ISBN (bipe ou digite)"
+            class="cds--text-input isbn-input"
+            :disabled="store.loading"
+          />
+          <cds-button
+            kind="primary"
+            size="md"
+            :disabled="store.loading || !isbn.trim()"
+            @click="handleBuscarIsbn"
+            class="btn-buscar"
+          >
+            {{ store.loading ? 'Buscando…' : 'Buscar' }}
+          </cds-button>
+        </div>
       </div>
       <p v-if="store.erro" class="msg-erro">{{ store.erro }}</p>
     </section>
 
     <!-- Formulário de metadados -->
     <section class="card">
-      <h2>Dados da Obra</h2>
-      <div class="form-grid">
-        <div class="form-field">
-          <label>Título *</label>
-          <input v-model="store.metadados.titulo" type="text" class="input" placeholder="Título da obra" />
-        </div>
-        <div class="form-field">
-          <label>Editora *</label>
-          <input v-model="store.metadados.editora" type="text" class="input" placeholder="Editora" />
-        </div>
-        <div class="form-field">
-          <label>Ano *</label>
-          <input v-model.number="store.metadados.ano" type="number" class="input" placeholder="Ano" />
-        </div>
-        <div class="form-field">
-          <label>Categoria *</label>
-          <input v-model="store.metadados.categoria" type="text" class="input" placeholder="Categoria" />
-        </div>
-        <div class="form-field form-field-full">
-          <label>Autores *</label>
-          <input
-            :value="store.metadados.autores?.join(', ') ?? ''"
-            type="text"
-            class="input"
-            placeholder="Autores (separados por vírgula)"
-            @input="handleAutoresInput"
-          />
-        </div>
-        <div class="form-field form-field-full">
-          <label>URL da Capa</label>
-          <input v-model="store.metadados.capa_url" type="url" class="input" placeholder="https://..." />
+      <h2 class="section-title">Dados da Obra</h2>
+      <div class="cds--grid cds--grid--narrow grid-container">
+        <div class="cds--row">
+          <!-- Título -->
+          <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-8 field-wrapper">
+            <cds-text-input
+              label-text="Título *"
+              placeholder="Título da obra"
+              :value="store.metadados.titulo || ''"
+              @input="store.metadados.titulo = ($event.target as any).value"
+            ></cds-text-input>
+          </div>
+          <!-- Editora -->
+          <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-8 field-wrapper">
+            <cds-text-input
+              label-text="Editora *"
+              placeholder="Editora"
+              :value="store.metadados.editora || ''"
+              @input="store.metadados.editora = ($event.target as any).value"
+            ></cds-text-input>
+          </div>
+          <!-- Ano -->
+          <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-8 field-wrapper">
+            <cds-text-input
+              type="number"
+              label-text="Ano *"
+              placeholder="Ano"
+              :value="store.metadados.ano || ''"
+              @input="store.metadados.ano = ($event.target as any).value ? Number(($event.target as any).value) : null"
+            ></cds-text-input>
+          </div>
+          <!-- Categoria -->
+          <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-8 field-wrapper">
+            <cds-text-input
+              label-text="Categoria *"
+              placeholder="Categoria"
+              :value="store.metadados.categoria || ''"
+              @input="store.metadados.categoria = ($event.target as any).value"
+            ></cds-text-input>
+          </div>
+          <!-- Autores -->
+          <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-16 field-wrapper">
+            <cds-text-input
+              label-text="Autores *"
+              placeholder="Autores (separados por vírgula)"
+              :value="store.metadados.autores?.join(', ') ?? ''"
+              @input="handleAutoresInput"
+            ></cds-text-input>
+          </div>
+          <!-- URL da Capa -->
+          <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-16 field-wrapper">
+            <cds-text-input
+              type="url"
+              label-text="URL da Capa"
+              placeholder="https://..."
+              :value="store.metadados.capa_url || ''"
+              @input="store.metadados.capa_url = ($event.target as any).value"
+            ></cds-text-input>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Quantidade de exemplares e ações -->
     <section class="card card-acao">
-      <div class="form-row">
-        <label class="label-inline">Quantidade de exemplares:</label>
-        <input
-          v-model.number="store.quantidadeExemplares"
+      <div class="actions-row">
+        <cds-text-input
           type="number"
           min="1"
-          class="input input-sm"
-        />
-        <button
-          class="btn btn-success"
-          :disabled="store.loading || !store.metadados.titulo"
-          @click="store.salvar()"
-        >
-          {{ store.loading ? 'Salvando…' : 'Salvar' }}
-        </button>
-        <button
-          class="btn btn-info"
-          :disabled="!store.etiquetaUrl"
-          @click="store.imprimirEtiquetas()"
-        >
-          Imprimir Etiquetas
-        </button>
-        <button class="btn btn-secondary" @click="handleResetar">
-          Novo Cadastro
-        </button>
+          label-text="Quantidade de exemplares"
+          :value="store.quantidadeExemplares"
+          @input="store.quantidadeExemplares = Number(($event.target as any).value)"
+          class="quantidade-input"
+        ></cds-text-input>
+        <div class="buttons-group">
+          <cds-button
+            kind="primary"
+            :disabled="store.loading || !store.metadados.titulo"
+            @click="store.salvar()"
+          >
+            {{ store.loading ? 'Salvando…' : 'Salvar' }}
+          </cds-button>
+          <cds-button
+            kind="tertiary"
+            :disabled="!store.etiquetaUrl"
+            @click="store.imprimirEtiquetas()"
+          >
+            Imprimir Etiquetas
+          </cds-button>
+          <cds-button kind="secondary" @click="handleResetar">
+            Novo Cadastro
+          </cds-button>
+        </div>
       </div>
 
       <div v-if="store.obraCriada" class="resultado">
-        <span class="tag tag-ok">✓ Obra cadastrada</span>
-        <strong>{{ store.obraCriada.titulo }}</strong>
-        <span class="tag tag-info">{{ store.exemplaresCriados.length }} exemplar(es) criado(s)</span>
+        <cds-tag type="green">✓ Obra cadastrada</cds-tag>
+        <strong class="resultado-nome">{{ store.obraCriada.titulo }}</strong>
+        <cds-tag type="blue">{{ store.exemplaresCriados.length }} exemplar(es) criado(s)</cds-tag>
       </div>
     </section>
   </div>
@@ -104,6 +140,9 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useCatalogacaoStore } from '@/stores/catalogacao'
 import { useQrScanner } from '@/composables/useQrScanner'
+import '@carbon/web-components/es/components/button/index.js'
+import '@carbon/web-components/es/components/text-input/index.js'
+import '@carbon/web-components/es/components/tag/index.js'
 
 const store = useCatalogacaoStore()
 const isbn = ref('')
@@ -139,124 +178,117 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@carbon/styles/scss/spacing' as *;
+@use '@carbon/styles/scss/type' as type;
+
 .catalogacao-view {
   max-width: 800px;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  color: #1c1c1e;
+  @include type.type-style('productive-heading-03');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-06;
+  color: var(--cds-text-primary, #161616);
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
+  background: var(--cds-layer-01, #f4f4f4);
+  border: 1px solid var(--cds-border-subtle-01, #e0e0e0);
+  padding: $spacing-05;
+  margin-bottom: $spacing-05;
 }
 
-.card h2 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-  color: #555;
+.section-title {
+  @include type.type-style('productive-heading-02');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-05;
+  color: var(--cds-text-secondary, #525252);
 }
 
 .card-acao {
-  background: #f0f4ff;
+  background: var(--cds-layer-02, #ffffff);
 }
 
 .form-row {
   display: flex;
-  gap: 0.5rem;
-  align-items: center;
+  gap: $spacing-05;
+  align-items: flex-end;
   flex-wrap: wrap;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-}
-
-.form-field {
-  display: flex;
+.scanner-row {
   flex-direction: column;
-  gap: 0.25rem;
+  align-items: flex-start;
+  gap: $spacing-02;
 }
 
-.form-field-full {
-  grid-column: 1 / -1;
+.label-bip {
+  @include type.type-style('label-01');
+  font-weight: type.font-weight('semibold');
+  color: var(--cds-text-secondary, #525252);
 }
 
-.form-field label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #555;
+.input-and-button {
+  display: flex;
+  gap: $spacing-05;
+  width: 100%;
 }
 
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.95rem;
+.isbn-input {
+  flex: 1;
+  padding: $spacing-05;
+  @include type.type-style('productive-heading-01');
+  border: 2px solid var(--cds-focus, #0f62fe);
 }
 
-.input-sm {
-  width: 80px;
+.btn-buscar {
+  height: 40px;
 }
 
-.label-inline {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #333;
-  white-space: nowrap;
+.grid-container {
+  padding: 0;
 }
 
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
+.field-wrapper {
+  margin-bottom: $spacing-05;
 }
 
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.actions-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $spacing-05;
+  flex-wrap: wrap;
 }
 
-.btn-primary  { background: #4a90d9; color: #fff; }
-.btn-success  { background: #27ae60; color: #fff; }
-.btn-info     { background: #17a2b8; color: #fff; }
-.btn-secondary { background: #eee; color: #333; }
+.quantidade-input {
+  width: 180px;
+}
+
+.buttons-group {
+  display: flex;
+  gap: $spacing-04;
+  align-items: center;
+}
 
 .resultado {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  font-size: 0.95rem;
+  gap: $spacing-03;
+  margin-top: $spacing-04;
 }
 
-.tag {
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
+.resultado-nome {
+  @include type.type-style('body-long-01');
+  font-weight: type.font-weight('semibold');
+  color: var(--cds-text-primary, #161616);
 }
-
-.tag-ok   { background: #d4edda; color: #155724; }
-.tag-info { background: #d1ecf1; color: #0c5460; }
 
 .msg-erro {
-  color: #c0392b;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
+  @include type.type-style('body-long-01');
+  color: var(--cds-support-error, #da1e28);
+  margin-top: $spacing-03;
 }
 </style>

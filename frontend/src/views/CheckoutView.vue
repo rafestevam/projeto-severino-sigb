@@ -4,45 +4,53 @@
 
     <!-- Seção: busca de leitor por CPF -->
     <section class="card">
-      <h2>1. Identificar Leitor</h2>
+      <h2 class="section-title">1. Identificar Leitor</h2>
       <div class="form-row">
-        <input
-          v-model="cpf"
-          type="text"
-          placeholder="CPF do leitor (somente números)"
-          class="input"
+        <cds-text-input
+          class="cpf-input"
+          :value="cpf"
+          @input="cpf = ($event.target as any).value"
+          label-text="CPF do leitor"
+          placeholder="CPF (somente números)"
           @keydown.enter="handleBuscarLeitor"
           :disabled="store.loading"
-        />
-        <button class="btn btn-primary" @click="handleBuscarLeitor" :disabled="store.loading">
+        ></cds-text-input>
+        <cds-button
+          kind="primary"
+          size="md"
+          @click="handleBuscarLeitor"
+          :disabled="store.loading"
+          class="btn-buscar"
+        >
           Buscar
-        </button>
+        </cds-button>
       </div>
       <p v-if="store.erroLeitor" class="msg-erro">{{ store.erroLeitor }}</p>
       <div v-if="store.leitor" class="resultado">
-        <span class="tag tag-ok">✓ Leitor identificado</span>
-        <strong>{{ store.leitor.nome }}</strong>
-        <span v-if="!store.leitor.ativo" class="tag tag-aviso">Inativo</span>
+        <cds-tag type="green">✓ Leitor identificado</cds-tag>
+        <strong class="resultado-nome">{{ store.leitor.nome }}</strong>
+        <cds-tag v-if="!store.leitor.ativo" type="warm-gray">Inativo</cds-tag>
       </div>
     </section>
 
     <!-- Seção: leitura do exemplar -->
     <section class="card">
-      <h2>2. Bipar Exemplar</h2>
-      <div class="form-row">
+      <h2 class="section-title">2. Bipar Exemplar</h2>
+      <div class="form-row scanner-row">
+        <label class="label-bip">Código QR (aponte o leitor aqui)</label>
         <input
           ref="qrInputRef"
           type="text"
-          placeholder="Código QR (aponte o leitor aqui)"
-          class="input"
+          placeholder="Código QR"
+          class="cds--text-input qr-input"
           :disabled="store.loading || !store.leitor"
         />
       </div>
       <p v-if="store.erroExemplar" class="msg-erro">{{ store.erroExemplar }}</p>
       <div v-if="store.exemplar" class="resultado">
-        <span class="tag tag-ok">✓ Exemplar identificado</span>
-        <strong>{{ store.exemplar.titulo_obra ?? store.exemplar.codigo_qr }}</strong>
-        <span class="tag tag-info">{{ store.exemplar.estado }}</span>
+        <cds-tag type="green">✓ Exemplar identificado</cds-tag>
+        <strong class="resultado-nome">{{ store.exemplar.titulo_obra ?? store.exemplar.codigo_qr }}</strong>
+        <cds-tag type="blue">{{ store.exemplar.estado }}</cds-tag>
       </div>
     </section>
 
@@ -50,16 +58,17 @@
     <section class="card card-acao">
       <p v-if="store.erroCheckout" class="msg-erro">{{ store.erroCheckout }}</p>
       <div class="form-row">
-        <button
-          class="btn btn-success btn-large"
+        <cds-button
+          kind="primary"
+          size="lg"
           :disabled="!store.leitor || !store.exemplar || store.loading"
           @click="store.confirmarCheckout()"
         >
           {{ store.loading ? 'Processando…' : 'Confirmar Empréstimo' }}
-        </button>
-        <button class="btn btn-secondary" @click="store.resetar()">
+        </cds-button>
+        <cds-button kind="secondary" size="lg" @click="store.resetar()">
           Limpar
-        </button>
+        </cds-button>
       </div>
     </section>
   </div>
@@ -70,6 +79,9 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCheckoutStore } from '@/stores/checkout'
 import { useQrScanner } from '@/composables/useQrScanner'
+import '@carbon/web-components/es/components/button/index.js'
+import '@carbon/web-components/es/components/text-input/index.js'
+import '@carbon/web-components/es/components/tag/index.js'
 
 const store = useCheckoutStore()
 const { leitor } = storeToRefs(store)
@@ -103,109 +115,90 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@carbon/styles/scss/spacing' as *;
+@use '@carbon/styles/scss/type' as type;
+
 .checkout-view {
   max-width: 700px;
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  color: #1c1c1e;
+  @include type.type-style('productive-heading-03');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-06;
+  color: var(--cds-text-primary, #161616);
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
+  background: var(--cds-layer-01, #f4f4f4);
+  border: 1px solid var(--cds-border-subtle-01, #e0e0e0);
+  padding: $spacing-05;
+  margin-bottom: $spacing-05;
 }
 
-.card h2 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-  color: #555;
+.section-title {
+  @include type.type-style('productive-heading-02');
+  font-weight: type.font-weight('semibold');
+  margin-bottom: $spacing-05;
+  color: var(--cds-text-secondary, #525252);
 }
 
 .card-acao {
-  background: #f0f4ff;
+  background: var(--cds-layer-02, #ffffff);
 }
 
 .form-row {
   display: flex;
-  gap: 0.5rem;
-  align-items: center;
+  gap: $spacing-05;
+  align-items: flex-end;
   flex-wrap: wrap;
 }
 
-.input {
+.cpf-input {
   flex: 1;
   min-width: 200px;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
 }
 
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
+.btn-buscar {
+  height: 40px;
 }
 
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.scanner-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $spacing-02;
 }
 
-.btn-primary {
-  background: #4a90d9;
-  color: #fff;
+.label-bip {
+  @include type.type-style('label-01');
+  font-weight: type.font-weight('semibold');
+  color: var(--cds-text-secondary, #525252);
 }
 
-.btn-success {
-  background: #27ae60;
-  color: #fff;
-}
-
-.btn-secondary {
-  background: #eee;
-  color: #333;
-}
-
-.btn-large {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+.qr-input {
+  width: 100%;
+  padding: $spacing-05;
+  @include type.type-style('productive-heading-01');
+  border: 2px solid var(--cds-focus, #0f62fe);
 }
 
 .resultado {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  font-size: 0.95rem;
+  gap: $spacing-03;
+  margin-top: $spacing-04;
 }
 
-.tag {
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
+.resultado-nome {
+  @include type.type-style('body-long-01');
+  font-weight: type.font-weight('semibold');
+  color: var(--cds-text-primary, #161616);
 }
-
-.tag-ok { background: #d4edda; color: #155724; }
-.tag-aviso { background: #fff3cd; color: #856404; }
-.tag-info { background: #d1ecf1; color: #0c5460; }
 
 .msg-erro {
-  color: #c0392b;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
+  @include type.type-style('body-long-01');
+  color: var(--cds-support-error, #da1e28);
+  margin-top: $spacing-03;
 }
 </style>

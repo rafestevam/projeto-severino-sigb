@@ -1,43 +1,51 @@
 <template>
   <div class="app-shell">
-    <nav class="sidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-logo">📚 SIGB</span>
-        <span class="sidebar-user">{{ auth.userName }}</span>
+    <cds-header class="app-header">
+      <cds-header-name href="/" prefix="📚">SIGB - Severino</cds-header-name>
+      <div class="header-user-container">
+        <span class="header-user">{{ auth.userName }}</span>
       </div>
+    </cds-header>
 
-      <ul class="nav-list">
-        <li>
-          <router-link to="/balcao/checkout" active-class="active">
+    <cds-side-nav expanded collapse-mode="responsive" class="app-side-nav">
+      <cds-side-nav-items>
+        <router-link to="/balcao/checkout" custom v-slot="{ href, navigate, isActive }">
+          <cds-side-nav-link :href="href" :active="isActive" @click="navigate">
             Check-Out
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/balcao/checkin" active-class="active">
+          </cds-side-nav-link>
+        </router-link>
+
+        <router-link to="/balcao/checkin" custom v-slot="{ href, navigate, isActive }">
+          <cds-side-nav-link :href="href" :active="isActive" @click="navigate">
             Check-In
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/catalogacao" active-class="active">
+          </cds-side-nav-link>
+        </router-link>
+
+        <router-link to="/catalogacao" custom v-slot="{ href, navigate, isActive }">
+          <cds-side-nav-link :href="href" :active="isActive" @click="navigate">
             Catalogação
-          </router-link>
-        </li>
-        <li v-if="auth.role === 'admin'">
-          <router-link to="/inventario" active-class="active">
+          </cds-side-nav-link>
+        </router-link>
+
+        <router-link v-if="auth.role === 'admin'" to="/inventario" custom v-slot="{ href, navigate, isActive }">
+          <cds-side-nav-link :href="href" :active="isActive" @click="navigate">
             Inventário
-          </router-link>
-        </li>
-        <li v-if="auth.role === 'admin'">
-          <router-link to="/admin/dashboard" active-class="active">
+          </cds-side-nav-link>
+        </router-link>
+
+        <router-link v-if="auth.role === 'admin'" to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
+          <cds-side-nav-link :href="href" :active="isActive" @click="navigate">
             Dashboard
-          </router-link>
-        </li>
-      </ul>
+          </cds-side-nav-link>
+        </router-link>
+      </cds-side-nav-items>
 
       <div class="sidebar-footer">
-        <button class="btn-logout" @click="auth.logout()">Sair</button>
+        <cds-button kind="danger" size="md" @click="auth.logout()" class="btn-logout">
+          Sair
+        </cds-button>
       </div>
-    </nav>
+    </cds-side-nav>
 
     <main class="main-content">
       <slot />
@@ -47,99 +55,81 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
+import '@carbon/web-components/es/components/ui-shell/index.js'
+import '@carbon/web-components/es/components/button/index.js'
 
 const auth = useAuthStore()
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use '@carbon/styles/scss/spacing' as *;
+@use '@carbon/styles/scss/type' as type;
+
 .app-shell {
   display: flex;
   min-height: 100vh;
 }
 
-.sidebar {
-  width: 220px;
-  background: #1c1c1e;
-  color: #f5f5f5;
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 8000;
+}
+
+.header-user-container {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding-right: $spacing-05;
+  color: var(--cds-text-inverse, #fff);
+  height: 100%;
+}
+
+.header-user {
+  @include type.type-style('label-01');
+  font-weight: type.font-weight('semibold');
+}
+
+.app-side-nav {
+  position: fixed;
+  top: 48px;
+  left: 0;
+  width: 256px;
+  height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
-  padding: 1rem 0;
-  flex-shrink: 0;
-}
-
-.sidebar-header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.5rem 1rem 1rem;
-  border-bottom: 1px solid #333;
-}
-
-.sidebar-logo {
-  font-size: 1.2rem;
-  font-weight: 700;
-}
-
-.sidebar-user {
-  font-size: 0.8rem;
-  color: #aaa;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.nav-list {
-  list-style: none;
-  margin: 1rem 0 0;
-  padding: 0;
-  flex: 1;
-}
-
-.nav-list li a {
-  display: block;
-  padding: 0.75rem 1rem;
-  color: #ccc;
-  text-decoration: none;
-  font-size: 0.95rem;
-  border-left: 3px solid transparent;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.nav-list li a:hover {
-  background: #2c2c2e;
-  color: #fff;
-}
-
-.nav-list li a.active {
-  background: #2c2c2e;
-  border-left-color: #4a90d9;
-  color: #fff;
+  z-index: 7000;
 }
 
 .sidebar-footer {
-  padding: 1rem;
-  border-top: 1px solid #333;
+  margin-top: auto;
+  padding: $spacing-05;
+  border-top: 1px solid var(--cds-border-subtle-01, #e0e0e0);
 }
 
 .btn-logout {
   width: 100%;
-  padding: 0.5rem;
-  background: #c0392b;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.btn-logout:hover {
-  background: #e74c3c;
 }
 
 .main-content {
   flex: 1;
-  padding: 1.5rem;
-  background: #f9f9f9;
+  margin-top: 48px; /* header height */
+  margin-left: 256px; /* side-nav width */
+  padding: $spacing-06;
+  background: var(--cds-background, #ffffff);
+  color: var(--cds-text-primary);
+  min-height: calc(100vh - 48px);
   overflow-y: auto;
+}
+
+@media (max-width: 992px) {
+  .app-side-nav {
+    display: none;
+  }
+  .main-content {
+    margin-left: 0;
+  }
 }
 </style>
