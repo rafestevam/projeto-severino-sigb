@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import Boolean, DateTime, Index, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,8 +20,13 @@ class LeitorModel(Base):
     # O CPF original nunca é persistido — apenas o hash SHA-256 (64 hex chars).
     cpf_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     telefone: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    email: Mapped[str] = mapped_column(String(256), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(256), nullable=True)
     ativo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+# Índice funcional: a reserva online (OPAC) resolve o leitor pelo e-mail do token,
+# comparando sem diferenciar maiúsculas/minúsculas.
+Index("ix_leitor_email_lower", func.lower(LeitorModel.email))

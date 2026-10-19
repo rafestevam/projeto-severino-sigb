@@ -123,8 +123,13 @@ class TestLeitorModelColumnTelefone:
 # ---------------------------------------------------------------------------
 
 class TestLeitorModelColumnEmail:
-    def test_email_nao_e_nullable(self) -> None:
-        assert _get_column("email").nullable is False
+    def test_email_e_nullable(self) -> None:
+        """US-030: e-mail é opcional no pré-cadastro (migração 0007)."""
+        assert _get_column("email").nullable is True
+
+    def test_email_tem_indice_funcional_lower(self) -> None:
+        indices = {idx.name for idx in LeitorModel.__table__.indexes}
+        assert "ix_leitor_email_lower" in indices
 
     def test_email_e_string_256(self) -> None:
         col = _get_column("email")

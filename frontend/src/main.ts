@@ -9,22 +9,22 @@ import './main.scss'
 /**
  * Bootstrap da SPA Severino SIGB:
  *  1. Cria a instância do Pinia.
- *  2. Inicializa o Keycloak via useAuthStore.init().
- *  3. Só monta a aplicação após autenticação bem-sucedida.
+ *  2. Verifica uma sessão SSO existente (check-sso), sem exigir login.
+ *  3. Instala o router e monta a aplicação, autenticado ou não.
+ *
+ * A autenticação é resolvida antes de instalar o router porque a primeira
+ * navegação já passa pelo guard: sem isso, quem tem sessão SSO seria mandado
+ * de novo ao login ao abrir uma rota do balcão.
  */
 async function bootstrap() {
   const app = createApp(App)
-  const pinia = createPinia()
-  app.use(pinia)
+  app.use(createPinia())
+
+  await useAuthStore().init()
+
   app.use(router)
-
-  const auth = useAuthStore()
-  const authenticated = await auth.init()
-
-  if (authenticated) {
-    app.mount('#app')
-  }
-  // Se não autenticado, o Keycloak redireciona para o login automaticamente.
+  await router.isReady()
+  app.mount('#app')
 }
 
 bootstrap()

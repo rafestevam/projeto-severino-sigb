@@ -12,3 +12,4 @@ qrcode[pil]
 reportlab
 Pillow
 apscheduler
+email-validator

@@ -11,6 +11,12 @@ class ReservaIn(BaseModel):
     leitor_id: UUID
 
 
+class ReservaMinhaIn(BaseModel):
+    """Reserva feita pelo próprio leitor no OPAC: o leitor vem do token, nunca do body."""
+
+    obra_id: UUID
+
+
 class ReservaOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

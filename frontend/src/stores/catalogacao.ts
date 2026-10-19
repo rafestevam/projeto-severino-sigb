@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
+import { extrairMensagem } from '@/services/erros'
 
 interface Metadados {
   titulo: string | null
@@ -9,6 +10,7 @@ interface Metadados {
   ano: number | null
   capa_url: string | null
   categoria: string | null
+  sinopse: string | null
 }
 
 interface ObraOut {
@@ -43,6 +45,7 @@ export const useCatalogacaoStore = defineStore('catalogacao', () => {
     ano: null,
     capa_url: null,
     categoria: null,
+    sinopse: null,
   })
   const quantidadeExemplares = ref(1)
   const obraCriada = ref<ObraOut | null>(null)
@@ -56,9 +59,9 @@ export const useCatalogacaoStore = defineStore('catalogacao', () => {
     loading.value = true
     try {
       const response = await api.post<Metadados>(`/obras/isbn/${isbn}`)
-      metadados.value = response.data
+      metadados.value = { ...metadados.value, ...response.data }
     } catch (err: unknown) {
-      erro.value = _extrairMensagem(err, 'Não foi possível buscar metadados para este ISBN.')
+      erro.value = extrairMensagem(err, 'Não foi possível buscar metadados para este ISBN.')
     } finally {
       loading.value = false
     }
@@ -77,6 +80,7 @@ export const useCatalogacaoStore = defineStore('catalogacao', () => {
         ano: metadados.value.ano ?? 0,
         capa_url: metadados.value.capa_url,
         categoria: metadados.value.categoria ?? '',
+        sinopse: metadados.value.sinopse || null,
       })
       obraCriada.value = obraResponse.data
 
@@ -91,7 +95,7 @@ export const useCatalogacaoStore = defineStore('catalogacao', () => {
         etiquetaUrl.value = `/api/exemplares/${exemplaresCriados.value[0].codigo_qr}/etiqueta.pdf`
       }
     } catch (err: unknown) {
-      erro.value = _extrairMensagem(err, 'Erro ao salvar obra e exemplares.')
+      erro.value = extrairMensagem(err, 'Erro ao salvar obra e exemplares.')
     } finally {
       loading.value = false
     }
@@ -106,7 +110,7 @@ export const useCatalogacaoStore = defineStore('catalogacao', () => {
   function resetar(): void {
     metadados.value = {
       titulo: null, autores: null, editora: null,
-      ano: null, capa_url: null, categoria: null,
+      ano: null, capa_url: null, categoria: null, sinopse: null,
     }
     quantidadeExemplares.value = 1
     obraCriada.value = null
@@ -121,20 +125,3 @@ export const useCatalogacaoStore = defineStore('catalogacao', () => {
     buscarIsbn, salvar, imprimirEtiquetas, resetar,
   }
 })
-
-function _extrairMensagem(err: unknown, fallback: string): string {
-  if (
-    err &&
-    typeof err === 'object' &&
-    'response' in err &&
-    err.response &&
-    typeof err.response === 'object' &&
-    'data' in err.response &&
-    err.response.data &&
-    typeof err.response.data === 'object' &&
-    'detail' in err.response.data
-  ) {
-    return String((err.response.data as Record<string, unknown>).detail)
-  }
-  return fallback
-}

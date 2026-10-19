@@ -6,15 +6,17 @@ evitando qualquer dependência de rede ou I/O externo.
 O use case é um thin delegator — os testes verificam:
   - que o gateway é chamado com o ISBN correto;
   - que o resultado do gateway é repassado integralmente;
-  - que None do gateway é substituído por IsbnMetadataOut() vazio.
+  - que None do gateway é substituído por MetadadosIsbn() vazio.
 """
 from __future__ import annotations
+
+import dataclasses
 
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.adapters.api.schemas.isbn_metadata import IsbnMetadataOut
+from app.domain.entities.metadados_isbn import MetadadosIsbn
 from app.use_cases.buscar_metadados_isbn import BuscarMetadadosIsbnUseCase
 
 
@@ -22,14 +24,14 @@ from app.use_cases.buscar_metadados_isbn import BuscarMetadadosIsbnUseCase
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _build_gateway(*, retorno: IsbnMetadataOut | None) -> MagicMock:
+def _build_gateway(*, retorno: MetadadosIsbn | None) -> MagicMock:
     """Constrói um mock de IsbnGateway com retorno configurado."""
     gateway = MagicMock()
     gateway.buscar = AsyncMock(return_value=retorno)
     return gateway
 
 
-def _make_metadata(**kwargs) -> IsbnMetadataOut:
+def _make_metadata(**kwargs) -> MetadadosIsbn:
     defaults = {
         "titulo": "Dom Casmurro",
         "autores": ["Machado de Assis"],
@@ -37,7 +39,7 @@ def _make_metadata(**kwargs) -> IsbnMetadataOut:
         "ano": 1899,
         "capa_url": "https://example.com/capa.jpg",
     }
-    return IsbnMetadataOut(**{**defaults, **kwargs})
+    return MetadadosIsbn(**{**defaults, **kwargs})
 
 
 # ---------------------------------------------------------------------------
@@ -68,13 +70,13 @@ async def test_execute_retorna_resultado_do_gateway_quando_encontrado():
 
 
 async def test_execute_retorna_schema_vazio_quando_gateway_retorna_none():
-    """Quando o gateway retorna None, execute() deve retornar IsbnMetadataOut() vazio."""
+    """Quando o gateway retorna None, execute() deve retornar MetadadosIsbn() vazio."""
     gateway = _build_gateway(retorno=None)
     use_case = BuscarMetadadosIsbnUseCase(gateway)
 
     result = await use_case.execute("0000000000000")
 
-    assert isinstance(result, IsbnMetadataOut)
+    assert isinstance(result, MetadadosIsbn)
     assert result.titulo is None
     assert result.autores is None
     assert result.editora is None
@@ -89,8 +91,8 @@ async def test_execute_schema_vazio_tem_todos_campos_none():
 
     result = await use_case.execute("9999999999999")
 
-    for field in IsbnMetadataOut.model_fields:
-        assert getattr(result, field) is None, f"Campo '{field}' deveria ser None"
+    for field in dataclasses.fields(MetadadosIsbn):
+        assert getattr(result, field.name) is None, f"Campo '{field.name}' deveria ser None"
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +102,7 @@ async def test_execute_schema_vazio_tem_todos_campos_none():
 
 async def test_execute_retorna_metadata_com_apenas_titulo():
     """Metadata com apenas título preenchido deve ser repassada integralmente."""
-    metadata = IsbnMetadataOut(titulo="Apenas Título")
+    metadata = MetadadosIsbn(titulo="Apenas Título")
     gateway = _build_gateway(retorno=metadata)
     use_case = BuscarMetadadosIsbnUseCase(gateway)
 
@@ -142,7 +144,7 @@ async def test_execute_retorna_metadata_completa():
 async def test_execute_aceita_isbn10():
     """O use case deve aceitar e repassar ISBN-10 sem nenhuma transformação."""
     isbn10 = "0132350882"
-    gateway = _build_gateway(retorno=IsbnMetadataOut(titulo="Qualquer"))
+    gateway = _build_gateway(retorno=MetadadosIsbn(titulo="Qualquer"))
     use_case = BuscarMetadadosIsbnUseCase(gateway)
 
     await use_case.execute(isbn10)
@@ -152,7 +154,7 @@ async def test_execute_aceita_isbn10():
 
 async def test_execute_retorna_multiplos_autores():
     """Lista de múltiplos autores deve ser repassada sem truncamento."""
-    metadata = IsbnMetadataOut(autores=["Autor A", "Autor B", "Autor C"])
+    metadata = MetadadosIsbn(autores=["Autor A", "Autor B", "Autor C"])
     gateway = _build_gateway(retorno=metadata)
     use_case = BuscarMetadadosIsbnUseCase(gateway)
 

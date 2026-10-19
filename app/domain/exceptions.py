@@ -126,3 +126,31 @@ class ExemplarJaBaixadoError(ValueError):
     def __init__(self, exemplar_id: str) -> None:
         super().__init__(f"Exemplar já foi baixado anteriormente: {exemplar_id}")
         self.exemplar_id = exemplar_id
+
+
+class CpfInvalidoError(ValueError):
+    """Raised when a CPF fails format or check-digit validation.
+
+    O CPF recebido não é anexado à exceção para não vazar o dado em logs.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("CPF inválido")
+
+
+class LeitorJaCadastradoError(ValueError):
+    """Raised when a pre-registration uses a CPF that already belongs to a reader.
+
+    Não carrega CPF nem dados do leitor existente, para não vazar informações.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("Já existe um cadastro para este CPF")
+
+
+class LeitorNaoEncontradoError(ValueError):
+    """Raised when a reader cannot be found by the given identifier."""
+
+    def __init__(self, identifier: str) -> None:
+        super().__init__(f"Leitor não encontrado: {identifier}")
+        self.identifier = identifier

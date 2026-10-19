@@ -2,6 +2,11 @@
   <div class="app-shell">
     <cds-header class="app-header">
       <cds-header-name href="/" prefix="📚">SIGB - Severino</cds-header-name>
+      <cds-header-nav menu-bar-label="SIGB - Severino">
+        <router-link to="/catalogo" custom v-slot="{ href, navigate }">
+          <cds-header-nav-item :href="href" @click="navigate">Catálogo público</cds-header-nav-item>
+        </router-link>
+      </cds-header-nav>
       <div class="header-user-container">
         <span class="header-user">{{ auth.userName }}</span>
       </div>
@@ -41,7 +46,7 @@
       </cds-side-nav-items>
 
       <div class="sidebar-footer">
-        <cds-button kind="danger" size="md" @click="auth.logout()" class="btn-logout">
+        <cds-button kind="danger" size="md" @click="sair" class="btn-logout">
           Sair
         </cds-button>
       </div>
@@ -54,11 +59,18 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import '@carbon/web-components/es/components/ui-shell/index.js'
 import '@carbon/web-components/es/components/button/index.js'
 
 const auth = useAuthStore()
+const router = useRouter()
+
+async function sair() {
+  await auth.logout()
+  router.push('/catalogo')
+}
 </script>
 
 <style scoped lang="scss">
@@ -83,7 +95,7 @@ const auth = useAuthStore()
   align-items: center;
   margin-left: auto;
   padding-right: $spacing-05;
-  color: var(--cds-text-inverse, #fff);
+  color: var(--cds-text-secondary, #525252);
   height: 100%;
 }
 

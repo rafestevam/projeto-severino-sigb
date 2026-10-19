@@ -34,3 +34,22 @@ def test_leitor_hash_cpf_returns_expected_sha256_hash() -> None:
 
     assert Leitor.hash_cpf(cpf) == expected_hash
     assert Leitor.hash_cpf(cpf) == expected_hash
+
+
+def test_leitor_hash_cpf_normaliza_mascara() -> None:
+    """US-030: checkout com CPF mascarado e pré-cadastro sem máscara geram o mesmo hash."""
+    assert Leitor.hash_cpf("529.982.247-25") == Leitor.hash_cpf("52998224725")
+
+
+def test_leitor_aceita_telefone_e_email_ausentes() -> None:
+    leitor = Leitor(
+        id=uuid4(),
+        nome="Sem Contato",
+        cpf_hash="abc",
+        telefone=None,
+        email=None,
+        ativo=False,
+        created_at=datetime(2024, 1, 1),
+    )
+    assert leitor.telefone is None
+    assert leitor.email is None

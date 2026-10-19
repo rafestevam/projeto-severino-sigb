@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.adapters.api.schemas.isbn_metadata import IsbnMetadataOut
+from app.domain.entities.metadados_isbn import MetadadosIsbn
 from app.domain.gateways.isbn_gateway import IsbnGateway
 
 
@@ -21,10 +21,10 @@ from app.domain.gateways.isbn_gateway import IsbnGateway
 class InMemoryIsbnGateway(IsbnGateway):
     """Gateway de teste que retorna dados de um dicionário em memória."""
 
-    def __init__(self, data: dict[str, IsbnMetadataOut] | None = None) -> None:
-        self._data: dict[str, IsbnMetadataOut] = data or {}
+    def __init__(self, data: dict[str, MetadadosIsbn] | None = None) -> None:
+        self._data: dict[str, MetadadosIsbn] = data or {}
 
-    async def buscar(self, isbn: str) -> IsbnMetadataOut | None:
+    async def buscar(self, isbn: str) -> MetadadosIsbn | None:
         return self._data.get(isbn)
 
 
@@ -41,14 +41,14 @@ def gateway_vazio() -> InMemoryIsbnGateway:
 def gateway_com_dados() -> InMemoryIsbnGateway:
     return InMemoryIsbnGateway(
         data={
-            "9788535902778": IsbnMetadataOut(
+            "9788535902778": MetadadosIsbn(
                 titulo="Dom Casmurro",
                 autores=["Machado de Assis"],
                 editora="Ática",
                 ano=1899,
                 capa_url="https://example.com/capa.jpg",
             ),
-            "9780132350884": IsbnMetadataOut(
+            "9780132350884": MetadadosIsbn(
                 titulo="Clean Code",
                 autores=["Robert C. Martin"],
                 editora="Prentice Hall",
@@ -96,16 +96,16 @@ async def test_buscar_retorna_none_para_isbn_desconhecido(
 async def test_buscar_retorna_metadata_para_isbn_conhecido(
     gateway_com_dados: InMemoryIsbnGateway,
 ):
-    """ISBN cadastrado deve retornar o IsbnMetadataOut correspondente."""
+    """ISBN cadastrado deve retornar o MetadadosIsbn correspondente."""
     result = await gateway_com_dados.buscar("9788535902778")
     assert result is not None
     assert result.titulo == "Dom Casmurro"
 
 
 async def test_buscar_retorna_tipo_correto(gateway_com_dados: InMemoryIsbnGateway):
-    """O retorno deve ser uma instância de IsbnMetadataOut quando encontrado."""
+    """O retorno deve ser uma instância de MetadadosIsbn quando encontrado."""
     result = await gateway_com_dados.buscar("9788535902778")
-    assert isinstance(result, IsbnMetadataOut)
+    assert isinstance(result, MetadadosIsbn)
 
 
 async def test_buscar_retorna_todos_os_campos_corretos(
@@ -140,13 +140,13 @@ async def test_buscar_isbn_inexistente_entre_dados_conhecidos_retorna_none(
 
 
 # ---------------------------------------------------------------------------
-# Testes — campos do IsbnMetadataOut (schema de retorno)
+# Testes — campos do MetadadosIsbn (schema de retorno)
 # ---------------------------------------------------------------------------
 
 
 async def test_metadata_out_campos_opcionais_podem_ser_none():
-    """IsbnMetadataOut com todos os campos None deve ser válido."""
-    metadata = IsbnMetadataOut()
+    """MetadadosIsbn com todos os campos None deve ser válido."""
+    metadata = MetadadosIsbn()
     assert metadata.titulo is None
     assert metadata.autores is None
     assert metadata.editora is None
@@ -155,9 +155,9 @@ async def test_metadata_out_campos_opcionais_podem_ser_none():
 
 
 async def test_metadata_out_retornado_com_campos_parciais():
-    """IsbnMetadataOut pode ser retornado com apenas alguns campos preenchidos."""
+    """MetadadosIsbn pode ser retornado com apenas alguns campos preenchidos."""
     gateway = InMemoryIsbnGateway(
-        data={"123": IsbnMetadataOut(titulo="Apenas Título")}
+        data={"123": MetadadosIsbn(titulo="Apenas Título")}
     )
     result = await gateway.buscar("123")
     assert result is not None

@@ -10,8 +10,8 @@
           class="cpf-input"
           :value="cpf"
           @input="cpf = ($event.target as any).value"
-          label-text="CPF do leitor"
-          placeholder="CPF (somente números)"
+          label="CPF do leitor"
+          placeholder="000.000.000-00"
           @keydown.enter="handleBuscarLeitor"
           :disabled="store.loading"
         ></cds-text-input>
@@ -29,7 +29,18 @@
       <div v-if="store.leitor" class="resultado">
         <cds-tag type="green">✓ Leitor identificado</cds-tag>
         <strong class="resultado-nome">{{ store.leitor.nome }}</strong>
-        <cds-tag v-if="!store.leitor.ativo" type="warm-gray">Inativo</cds-tag>
+        <cds-tag v-if="store.leitor.status === 'pendente'" type="warm-gray">
+          Pendente de ativação
+        </cds-tag>
+        <cds-button
+          v-if="store.leitor.status === 'pendente'"
+          kind="tertiary"
+          size="sm"
+          :disabled="store.loading"
+          @click="store.ativarLeitor()"
+        >
+          Ativar leitor
+        </cds-button>
       </div>
     </section>
 
@@ -101,7 +112,7 @@ function handleBuscarLeitor() {
 
 // Foca no campo QR quando o leitor for identificado
 watch(leitor, (novoLeitor) => {
-  if (novoLeitor) {
+  if (novoLeitor?.ativo) {
     attach()
   }
 })

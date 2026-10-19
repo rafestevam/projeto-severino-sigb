@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.adapters.api.schemas.isbn_metadata import IsbnMetadataOut
+from app.domain.entities.metadados_isbn import MetadadosIsbn
 from app.infrastructure.isbn_gateway_impl import IsbnGatewayImpl
 
 _ISBN = "9788535902778"
@@ -319,7 +319,7 @@ class TestMapOpenLibrary:
 
     def test_retorna_isbn_metadata_out(self):
         result = IsbnGatewayImpl._map_open_library({"title": "X"})
-        assert isinstance(result, IsbnMetadataOut)
+        assert isinstance(result, MetadadosIsbn)
 
 
 # ---------------------------------------------------------------------------
@@ -389,7 +389,7 @@ class TestMapGoogleBooks:
 
     def test_retorna_isbn_metadata_out(self):
         result = IsbnGatewayImpl._map_google_books({"title": "X"})
-        assert isinstance(result, IsbnMetadataOut)
+        assert isinstance(result, MetadadosIsbn)
 
 
 # ---------------------------------------------------------------------------
@@ -454,7 +454,7 @@ class TestMapCbl:
 
     def test_retorna_isbn_metadata_out(self):
         result = IsbnGatewayImpl._map_cbl({"Title": "X"})
-        assert isinstance(result, IsbnMetadataOut)
+        assert isinstance(result, MetadadosIsbn)
 
 
 # ---------------------------------------------------------------------------
@@ -523,3 +523,39 @@ class TestTratamentoErros:
         result = await gateway.buscar(_ISBN)
 
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Sinopse (US-029)
+# ---------------------------------------------------------------------------
+
+
+class TestMapeamentoSinopse:
+    def test_google_books_usa_description(self):
+        result = IsbnGatewayImpl._map_google_books({"title": "T", "description": "Resumo."})
+        assert result.sinopse == "Resumo."
+
+    def test_google_books_sinopse_none_sem_description(self):
+        assert IsbnGatewayImpl._map_google_books({"title": "T"}).sinopse is None
+
+    def test_open_library_usa_notes_string(self):
+        result = IsbnGatewayImpl._map_open_library({"title": "T", "notes": "Notas."})
+        assert result.sinopse == "Notas."
+
+    def test_open_library_usa_notes_dict(self):
+        result = IsbnGatewayImpl._map_open_library(
+            {"title": "T", "notes": {"type": "/type/text", "value": "Notas tipadas."}}
+        )
+        assert result.sinopse == "Notas tipadas."
+
+    def test_open_library_fallback_para_excerpts(self):
+        result = IsbnGatewayImpl._map_open_library(
+            {"title": "T", "excerpts": [{"text": "Trecho inicial."}]}
+        )
+        assert result.sinopse == "Trecho inicial."
+
+    def test_open_library_sinopse_none_sem_notes_nem_excerpts(self):
+        assert IsbnGatewayImpl._map_open_library({"title": "T"}).sinopse is None
+
+    def test_cbl_sem_sinopse(self):
+        assert IsbnGatewayImpl._map_cbl({"Title": "T"}).sinopse is None

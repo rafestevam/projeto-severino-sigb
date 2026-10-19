@@ -11,18 +11,23 @@ Cobre:
   - EmprestimoNaoEncontradoError: herança, mensagem, atributo identifier.
   - LimiteRenovacoesAtingidoError: herança, mensagem, atributos emprestimo_id e limite.
   - EmprestimoSemAtivoPorQrError: herança, mensagem, atributo codigo_qr.
+  - CpfInvalidoError / LeitorJaCadastradoError: não carregam dados pessoais.
+  - LeitorNaoEncontradoError: herança, mensagem, atributo identifier.
 """
 from __future__ import annotations
 
 import pytest
 
 from app.domain.exceptions import (
+    CpfInvalidoError,
     DuplicateIsbnError,
     EmprestimoNaoEncontradoError,
     EmprestimoSemAtivoPorQrError,
     ExemplarNaoDisponivelError,
     ExemplarNotFoundError,
     LeitorInativoError,
+    LeitorJaCadastradoError,
+    LeitorNaoEncontradoError,
     LimiteEmprestimosAtingidoError,
     LimiteRenovacoesAtingidoError,
     ObraNotFoundError,
@@ -262,3 +267,24 @@ class TestIsolamentoExcecoes:
                 raise ExemplarNotFoundError("LIB-2025-00001")
             except ObraNotFoundError:
                 pass  # não deve entrar aqui
+
+
+class TestExcecoesOpac:
+    @pytest.mark.parametrize(
+        "exc", [CpfInvalidoError(), LeitorJaCadastradoError(), LeitorNaoEncontradoError("x")]
+    )
+    def test_herdam_de_value_error(self, exc: Exception) -> None:
+        assert isinstance(exc, ValueError)
+
+    def test_cpf_invalido_nao_tem_atributos_de_dados(self) -> None:
+        assert str(CpfInvalidoError()) == "CPF inválido"
+
+    def test_leitor_ja_cadastrado_nao_vaza_dados(self) -> None:
+        exc = LeitorJaCadastradoError()
+        assert str(exc) == "Já existe um cadastro para este CPF"
+        assert not hasattr(exc, "leitor_id")
+
+    def test_leitor_nao_encontrado_carrega_identifier(self) -> None:
+        exc = LeitorNaoEncontradoError("abc")
+        assert exc.identifier == "abc"
+        assert "abc" in str(exc)

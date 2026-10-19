@@ -38,7 +38,7 @@
           <!-- Título -->
           <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-8 field-wrapper">
             <cds-text-input
-              label-text="Título *"
+              label="Título *"
               placeholder="Título da obra"
               :value="store.metadados.titulo || ''"
               @input="store.metadados.titulo = ($event.target as any).value"
@@ -47,7 +47,7 @@
           <!-- Editora -->
           <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-8 field-wrapper">
             <cds-text-input
-              label-text="Editora *"
+              label="Editora *"
               placeholder="Editora"
               :value="store.metadados.editora || ''"
               @input="store.metadados.editora = ($event.target as any).value"
@@ -57,7 +57,7 @@
           <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-8 field-wrapper">
             <cds-text-input
               type="number"
-              label-text="Ano *"
+              label="Ano *"
               placeholder="Ano"
               :value="store.metadados.ano || ''"
               @input="store.metadados.ano = ($event.target as any).value ? Number(($event.target as any).value) : null"
@@ -66,7 +66,7 @@
           <!-- Categoria -->
           <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-8 field-wrapper">
             <cds-text-input
-              label-text="Categoria *"
+              label="Categoria *"
               placeholder="Categoria"
               :value="store.metadados.categoria || ''"
               @input="store.metadados.categoria = ($event.target as any).value"
@@ -75,7 +75,7 @@
           <!-- Autores -->
           <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-16 field-wrapper">
             <cds-text-input
-              label-text="Autores *"
+              label="Autores *"
               placeholder="Autores (separados por vírgula)"
               :value="store.metadados.autores?.join(', ') ?? ''"
               @input="handleAutoresInput"
@@ -85,11 +85,21 @@
           <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-16 field-wrapper">
             <cds-text-input
               type="url"
-              label-text="URL da Capa"
+              label="URL da Capa"
               placeholder="https://..."
               :value="store.metadados.capa_url || ''"
               @input="store.metadados.capa_url = ($event.target as any).value"
             ></cds-text-input>
+          </div>
+          <!-- Sinopse (exibida no catálogo público) -->
+          <div class="cds--col-sm-4 cds--col-md-8 cds--col-lg-16 field-wrapper">
+            <cds-textarea
+              label="Sinopse"
+              helper-text="Exibida na página da obra no catálogo público."
+              rows="4"
+              :value="store.metadados.sinopse || ''"
+              @input="store.metadados.sinopse = ($event.target as any).value"
+            ></cds-textarea>
           </div>
         </div>
       </div>
@@ -101,7 +111,7 @@
         <cds-text-input
           type="number"
           min="1"
-          label-text="Quantidade de exemplares"
+          label="Quantidade de exemplares"
           :value="store.quantidadeExemplares"
           @input="store.quantidadeExemplares = Number(($event.target as any).value)"
           class="quantidade-input"
@@ -142,6 +152,7 @@ import { useCatalogacaoStore } from '@/stores/catalogacao'
 import { useQrScanner } from '@/composables/useQrScanner'
 import '@carbon/web-components/es/components/button/index.js'
 import '@carbon/web-components/es/components/text-input/index.js'
+import '@carbon/web-components/es/components/textarea/index.js'
 import '@carbon/web-components/es/components/tag/index.js'
 
 const store = useCatalogacaoStore()

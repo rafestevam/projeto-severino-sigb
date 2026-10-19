@@ -6,6 +6,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.repositories.models.exemplar import ExemplarModel
+from app.domain.entities.disponibilidade_obra import DisponibilidadeObra
 from app.domain.entities.exemplar import Exemplar
 from app.domain.repositories.exemplar_repository import ExemplarRepository
 
@@ -126,3 +127,28 @@ class SQLAlchemyExemplarRepository(ExemplarRepository):
             select(func.count()).where(ExemplarModel.origem == origem)
         )
         return result.scalar_one()
+
+    async def contar_disponibilidade(
+        self, obra_ids: list[UUID]
+    ) -> dict[UUID, DisponibilidadeObra]:
+        if not obra_ids:
+            return {}
+        result = await self._session.execute(
+            select(ExemplarModel.obra_id, ExemplarModel.estado, func.count())
+            .where(
+                ExemplarModel.obra_id.in_(obra_ids),
+                ExemplarModel.estado != "baixado",
+            )
+            .group_by(ExemplarModel.obra_id, ExemplarModel.estado)
+        )
+        contagens: dict[UUID, dict[str, int]] = {}
+        for obra_id, estado, total in result.all():
+            contagens.setdefault(obra_id, {})[estado] = total
+        return {
+            obra_id: DisponibilidadeObra(
+                obra_id=obra_id,
+                disponiveis=por_estado.get("disponivel", 0),
+                emprestados=por_estado.get("emprestado", 0),
+            )
+            for obra_id, por_estado in contagens.items()
+        }

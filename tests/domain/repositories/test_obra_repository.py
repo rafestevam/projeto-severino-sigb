@@ -87,6 +87,31 @@ class InMemoryObraRepository(ObraRepository):
             )
             self._store[obra_id] = updated
 
+    async def buscar_catalogo_publico(
+        self, termo: str | None, page: int, page_size: int
+    ) -> tuple[list[Obra], int]:
+        # O stub não conhece exemplares: o filtro de exemplares ativos (D3) é
+        # coberto pelos testes de integração do repositório SQLAlchemy.
+        results = sorted(self._store.values(), key=lambda o: o.titulo)
+        if termo:
+            t = termo.lower()
+            results = [
+                o for o in results
+                if t in o.titulo.lower()
+                or any(t in a.lower() for a in o.autores)
+                or t in o.categoria.lower()
+            ]
+        offset = (page - 1) * page_size
+        return results[offset : offset + page_size], len(results)
+
+    async def get_posicao_ranking(self, obra_id: UUID) -> int | None:
+        obra = self._store.get(obra_id)
+        if obra is None or obra.total_emprestimos == 0:
+            return None
+        return 1 + sum(
+            1 for o in self._store.values() if o.total_emprestimos > obra.total_emprestimos
+        )
+
 
 # ---------------------------------------------------------------------------
 # Fixtures locais
@@ -172,3 +197,36 @@ async def test_save_sobrescreve_obra_existente(repo: InMemoryObraRepository, obr
 async def test_abc_nao_pode_ser_instanciada_diretamente() -> None:
     with pytest.raises(TypeError):
         ObraRepository()  # type: ignore[abstract]
+
+
+async def test_buscar_catalogo_publico_combina_campos_com_or(repo: InMemoryObraRepository) -> None:
+    await repo.save(make_obra(id=uuid4(), titulo="Dom Casmurro", autores=["Machado"], categoria="Romance"))
+    await repo.save(make_obra(id=uuid4(), titulo="Outro", autores=["Clarice"], categoria="Machado"))
+    await repo.save(make_obra(id=uuid4(), titulo="Sem Relação", autores=["X"], categoria="Y"))
+
+    obras, total = await repo.buscar_catalogo_publico("machado", page=1, page_size=10)
+
+    assert total == 2
+    assert {o.titulo for o in obras} == {"Dom Casmurro", "Outro"}
+
+
+async def test_get_posicao_ranking_compartilha_posicao_em_empate(repo: InMemoryObraRepository) -> None:
+    a = make_obra(id=uuid4(), titulo="A")
+    a.total_emprestimos = 10
+    b = make_obra(id=uuid4(), titulo="B")
+    b.total_emprestimos = 10
+    c = make_obra(id=uuid4(), titulo="C")
+    c.total_emprestimos = 3
+    for o in (a, b, c):
+        await repo.save(o)
+
+    assert await repo.get_posicao_ranking(a.id) == 1
+    assert await repo.get_posicao_ranking(b.id) == 1
+    assert await repo.get_posicao_ranking(c.id) == 3
+
+
+async def test_get_posicao_ranking_none_para_obra_nunca_emprestada(
+    repo: InMemoryObraRepository, obra: Obra
+) -> None:
+    await repo.save(obra)
+    assert await repo.get_posicao_ranking(obra.id) is None

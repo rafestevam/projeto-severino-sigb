@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import Text, func, select, text
+from sqlalchemy import Text, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.adapters.repositories.models.exemplar import ExemplarModel
 from app.adapters.repositories.models.obra import ObraModel
 from app.domain.entities.obra import Obra
 from app.domain.repositories.obra_repository import ObraRepository
@@ -22,6 +23,7 @@ def _to_entity(model: ObraModel) -> Obra:
         categoria=model.categoria,
         created_at=model.created_at,
         total_emprestimos=model.total_emprestimos,
+        sinopse=model.sinopse,
     )
 
 
@@ -37,7 +39,21 @@ def _from_entity(entity: Obra) -> ObraModel:
         categoria=entity.categoria,
         created_at=entity.created_at,
         total_emprestimos=entity.total_emprestimos,
+        sinopse=entity.sinopse,
     )
+
+
+_LIKE_ESCAPE = "\\"
+
+
+def _padrao_contem(termo: str) -> str:
+    """Padrão ILIKE "contém" com `%` e `_` do termo tratados como literais."""
+    escapado = (
+        termo.replace(_LIKE_ESCAPE, _LIKE_ESCAPE * 2)
+        .replace("%", f"{_LIKE_ESCAPE}%")
+        .replace("_", f"{_LIKE_ESCAPE}_")
+    )
+    return f"%{escapado}%"
 
 
 class SQLAlchemyObraRepository(ObraRepository):
@@ -120,3 +136,51 @@ class SQLAlchemyObraRepository(ObraRepository):
             {"id": obra_id},
         )
         await self._session.flush()
+
+    async def buscar_catalogo_publico(
+        self, termo: str | None, page: int, page_size: int
+    ) -> tuple[list[Obra], int]:
+        tem_exemplar_ativo = (
+            select(ExemplarModel.id)
+            .where(
+                ExemplarModel.obra_id == ObraModel.id,
+                ExemplarModel.estado != "baixado",
+            )
+            .exists()
+        )
+        query = select(ObraModel).where(tem_exemplar_ativo)
+        if termo and termo.strip():
+            padrao = _padrao_contem(termo.strip())
+            query = query.where(
+                or_(
+                    ObraModel.titulo.ilike(padrao, escape=_LIKE_ESCAPE),
+                    ObraModel.autores.cast(Text).ilike(padrao, escape=_LIKE_ESCAPE),  # type: ignore[attr-defined]
+                    ObraModel.categoria.ilike(padrao, escape=_LIKE_ESCAPE),
+                )
+            )
+
+        count_result = await self._session.execute(
+            select(func.count()).select_from(query.subquery())
+        )
+        total: int = count_result.scalar_one()
+
+        offset = (page - 1) * page_size
+        rows_result = await self._session.execute(
+            query.order_by(ObraModel.titulo, ObraModel.id).offset(offset).limit(page_size)
+        )
+        return [_to_entity(row) for row in rows_result.scalars().all()], total
+
+    async def get_posicao_ranking(self, obra_id: UUID) -> int | None:
+        total_result = await self._session.execute(
+            select(ObraModel.total_emprestimos).where(ObraModel.id == obra_id)
+        )
+        total_emprestimos = total_result.scalar_one_or_none()
+        if not total_emprestimos:
+            return None
+
+        mais_emprestadas = await self._session.execute(
+            select(func.count())
+            .select_from(ObraModel)
+            .where(ObraModel.total_emprestimos > total_emprestimos)
+        )
+        return 1 + mais_emprestadas.scalar_one()

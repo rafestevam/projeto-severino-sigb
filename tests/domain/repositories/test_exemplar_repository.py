@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from app.domain.entities.disponibilidade_obra import DisponibilidadeObra
 from app.domain.entities.exemplar import Exemplar
 from app.domain.repositories.exemplar_repository import ExemplarRepository
 from tests.domain.repositories.conftest import EXEMPLAR_ID, OBRA_ID, make_exemplar
@@ -89,6 +90,23 @@ class InMemoryExemplarRepository(ExemplarRepository):
 
     async def count_by_origem(self, origem: str) -> int:
         return sum(1 for e in self._store.values() if e.origem == origem)
+
+    async def contar_disponibilidade(
+        self, obra_ids: list[UUID]
+    ) -> dict[UUID, DisponibilidadeObra]:
+        resultado: dict[UUID, DisponibilidadeObra] = {}
+        for obra_id in obra_ids:
+            ativos = [
+                e for e in self._store.values()
+                if e.obra_id == obra_id and e.estado != "baixado"
+            ]
+            if ativos:
+                resultado[obra_id] = DisponibilidadeObra(
+                    obra_id=obra_id,
+                    disponiveis=sum(1 for e in ativos if e.estado == "disponivel"),
+                    emprestados=sum(1 for e in ativos if e.estado == "emprestado"),
+                )
+        return resultado
 
 
 # ---------------------------------------------------------------------------
@@ -173,3 +191,20 @@ async def test_update_estado_retorna_none_para_id_inexistente(repo: InMemoryExem
 async def test_abc_nao_pode_ser_instanciada_diretamente() -> None:
     with pytest.raises(TypeError):
         ExemplarRepository()  # type: ignore[abstract]
+
+
+async def test_contar_disponibilidade_agrega_varias_obras_e_ignora_baixados(
+    repo: InMemoryExemplarRepository,
+) -> None:
+    obra_a, obra_b, obra_so_baixados = uuid4(), uuid4(), uuid4()
+    await repo.save(make_exemplar(id=uuid4(), obra_id=obra_a, codigo_qr="A1", estado="disponivel"))
+    await repo.save(make_exemplar(id=uuid4(), obra_id=obra_a, codigo_qr="A2", estado="emprestado"))
+    await repo.save(make_exemplar(id=uuid4(), obra_id=obra_a, codigo_qr="A3", estado="baixado"))
+    await repo.save(make_exemplar(id=uuid4(), obra_id=obra_b, codigo_qr="B1", estado="emprestado"))
+    await repo.save(make_exemplar(id=uuid4(), obra_id=obra_so_baixados, codigo_qr="C1", estado="baixado"))
+
+    resultado = await repo.contar_disponibilidade([obra_a, obra_b, obra_so_baixados])
+
+    assert resultado[obra_a] == DisponibilidadeObra(obra_a, disponiveis=1, emprestados=1)
+    assert resultado[obra_b].disponivel is False
+    assert obra_so_baixados not in resultado

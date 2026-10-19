@@ -40,3 +40,19 @@ class ObraRepository(ABC):
 
     @abstractmethod
     async def increment_total_emprestimos(self, obra_id: UUID) -> None: ...
+
+    @abstractmethod
+    async def buscar_catalogo_publico(
+        self, termo: str | None, page: int, page_size: int
+    ) -> tuple[list[Obra], int]:
+        """Busca do OPAC: `termo` casa com título OU autor OU categoria.
+
+        Só inclui obras com ao menos um exemplar não baixado, ordenadas por título.
+        """
+
+    @abstractmethod
+    async def get_posicao_ranking(self, obra_id: UUID) -> int | None:
+        """Posição da obra no "Preferidos da Galera" (1 = mais emprestada).
+
+        Empates compartilham a posição. Retorna None se a obra nunca foi emprestada.
+        """

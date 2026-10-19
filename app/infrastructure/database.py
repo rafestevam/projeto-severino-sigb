@@ -50,6 +50,16 @@ class Base(DeclarativeBase):
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency that opens an AsyncSession and closes it after the request."""
+    """FastAPI dependency: one AsyncSession (one transaction) per request.
+
+    Commits when the handler finishes without error and rolls back otherwise.
+    Without the commit, the session closes with the transaction still open and
+    every write made through the API is silently discarded.
+    """
     async with _get_session_local()() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

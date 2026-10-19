@@ -36,6 +36,7 @@ class CadastrarObraUseCase:
             ano=dados.ano,
             capa_url=dados.capa_url,
             categoria=dados.categoria,
+            sinopse=dados.sinopse,
             created_at=datetime.now(timezone.utc),
         )
         return await self._repo.save(obra)

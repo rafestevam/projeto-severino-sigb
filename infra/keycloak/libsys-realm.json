@@ -1,0 +1,55 @@
+{
+  "realm": "libsys",
+  "displayName": "Biblioteca Severino",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "verifyEmail": true,
+  "resetPasswordAllowed": true,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Administração da biblioteca: balcão, inventário e dashboard" },
+      { "name": "operador", "description": "Operação do balcão: checkout, check-in e catalogação" },
+      { "name": "leitor", "description": "Leitor do OPAC: reserva de obras online" },
+      { "name": "offline_access", "description": "${role_offline-access}" },
+      { "name": "uma_authorization", "description": "${role_uma_authorization}" },
+      {
+        "name": "default-roles-libsys",
+        "description": "Papéis padrão: todo auto-registro pelo OPAC é leitor",
+        "composite": true,
+        "composites": { "realm": ["offline_access", "uma_authorization", "leitor"] }
+      }
+    ]
+  },
+  "defaultRole": { "name": "default-roles-libsys" },
+  "clients": [
+    {
+      "clientId": "libsys-spa",
+      "name": "Severino SIGB (SPA)",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "rootUrl": "https://localhost:8443",
+      "baseUrl": "/catalogo",
+      "redirectUris": [
+        "https://localhost:8443/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://localhost:8443/*##http://localhost:5173/*"
+      },
+      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"]
+    }
+  ]
+}

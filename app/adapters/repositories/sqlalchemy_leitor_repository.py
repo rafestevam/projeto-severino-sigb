@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.repositories.models.leitor import LeitorModel
@@ -61,3 +61,27 @@ class SQLAlchemyLeitorRepository(LeitorRepository):
         await self._session.flush()
         await self._session.refresh(model)
         return _to_entity(model)
+
+    async def ativar(self, id: UUID) -> Leitor | None:
+        await self._session.execute(
+            text("UPDATE leitor SET ativo = true WHERE id = :id"),
+            {"id": id},
+        )
+        await self._session.flush()
+        model = await self._session.get(LeitorModel, id)
+        if model is None:
+            return None
+        self._session.expire(model)
+        await self._session.refresh(model)
+        return _to_entity(model)
+
+    async def get_by_email(self, email: str) -> Leitor | None:
+        result = await self._session.execute(
+            select(LeitorModel)
+            .where(func.lower(LeitorModel.email) == email.strip().lower())
+            .limit(2)
+        )
+        encontrados = result.scalars().all()
+        if len(encontrados) != 1:
+            return None
+        return _to_entity(encontrados[0])

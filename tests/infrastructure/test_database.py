@@ -107,3 +107,47 @@ class TestBase:
         from app.infrastructure.database import Base
 
         assert issubclass(Base, DeclarativeBase)
+
+
+# ---------------------------------------------------------------------------
+# get_db_session — transação por requisição
+# ---------------------------------------------------------------------------
+
+
+def _fake_session_local(session):
+    from unittest.mock import AsyncMock
+
+    context = MagicMock()
+    context.__aenter__ = AsyncMock(return_value=session)
+    context.__aexit__ = AsyncMock(return_value=False)
+    return MagicMock(return_value=MagicMock(return_value=context))
+
+
+async def test_get_db_session_faz_commit_quando_handler_termina_sem_erro(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    session = AsyncMock()
+    monkeypatch.setattr(database_module, "_get_session_local", _fake_session_local(session))
+
+    gen = database_module.get_db_session()
+    assert await gen.__anext__() is session
+    with pytest.raises(StopAsyncIteration):
+        await gen.__anext__()
+
+    session.commit.assert_awaited_once()
+    session.rollback.assert_not_awaited()
+
+
+async def test_get_db_session_faz_rollback_e_propaga_erro_do_handler(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    session = AsyncMock()
+    monkeypatch.setattr(database_module, "_get_session_local", _fake_session_local(session))
+
+    gen = database_module.get_db_session()
+    await gen.__anext__()
+    with pytest.raises(ValueError):
+        await gen.athrow(ValueError("falha no handler"))
+
+    session.rollback.assert_awaited_once()
+    session.commit.assert_not_awaited()

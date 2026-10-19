@@ -26,3 +26,11 @@ def test_obra_instantiation_sets_all_attributes() -> None:
     assert obra.titulo == "Clean Architecture"
     assert obra.autores == autores
     assert obra.created_at == created_at
+
+
+def test_obra_sinopse_e_opcional_com_default_none() -> None:
+    obra = Obra(
+        id=uuid4(), isbn=None, titulo="T", autores=["A"], editora="E", ano=2000,
+        capa_url="", categoria="C", created_at=datetime(2024, 1, 1),
+    )
+    assert obra.sinopse is None

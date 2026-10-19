@@ -17,3 +17,4 @@ class Obra:
     categoria: str
     created_at: datetime
     total_emprestimos: int = field(default=0)
+    sinopse: str | None = field(default=None)

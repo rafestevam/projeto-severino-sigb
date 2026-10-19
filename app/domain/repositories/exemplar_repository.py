@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from app.domain.entities.disponibilidade_obra import DisponibilidadeObra
 from app.domain.entities.exemplar import Exemplar
 
 
@@ -39,3 +40,12 @@ class ExemplarRepository(ABC):
 
     @abstractmethod
     async def count_by_origem(self, origem: str) -> int: ...
+
+    @abstractmethod
+    async def contar_disponibilidade(
+        self, obra_ids: list[UUID]
+    ) -> dict[UUID, DisponibilidadeObra]:
+        """Contagem agregada (uma única consulta) de exemplares não baixados por obra.
+
+        Obras sem exemplares ativos não aparecem no dicionário.
+        """

@@ -36,6 +36,20 @@ class InMemoryLeitorRepository(LeitorRepository):
         self._store[leitor.id] = leitor
         return leitor
 
+    async def ativar(self, id: UUID) -> Leitor | None:
+        leitor = self._store.get(id)
+        if leitor is None:
+            return None
+        leitor.ativo = True
+        return leitor
+
+    async def get_by_email(self, email: str) -> Leitor | None:
+        encontrados = [
+            l for l in self._store.values()
+            if l.email and l.email.lower() == email.strip().lower()
+        ]
+        return encontrados[0] if len(encontrados) == 1 else None
+
 
 # ---------------------------------------------------------------------------
 # Fixtures locais
@@ -116,3 +130,31 @@ async def test_list_ativos_retorna_lista_vazia_quando_nenhum_ativo(repo: InMemor
 async def test_abc_nao_pode_ser_instanciada_diretamente() -> None:
     with pytest.raises(TypeError):
         LeitorRepository()  # type: ignore[abstract]
+
+
+async def test_ativar_marca_leitor_como_ativo(repo: InMemoryLeitorRepository) -> None:
+    pendente = make_leitor(id=uuid4(), ativo=False)
+    await repo.save(pendente)
+
+    ativado = await repo.ativar(pendente.id)
+
+    assert ativado is not None
+    assert ativado.ativo is True
+
+
+async def test_ativar_retorna_none_para_id_inexistente(repo: InMemoryLeitorRepository) -> None:
+    assert await repo.ativar(uuid4()) is None
+
+
+async def test_get_by_email_ignora_caixa(repo: InMemoryLeitorRepository) -> None:
+    leitor = make_leitor(id=uuid4(), email="Ana@Example.com")
+    await repo.save(leitor)
+
+    assert await repo.get_by_email("ana@example.COM") == leitor
+
+
+async def test_get_by_email_none_quando_vinculo_ambiguo(repo: InMemoryLeitorRepository) -> None:
+    await repo.save(make_leitor(id=uuid4(), email="dup@example.com"))
+    await repo.save(make_leitor(id=uuid4(), email="dup@example.com"))
+
+    assert await repo.get_by_email("dup@example.com") is None

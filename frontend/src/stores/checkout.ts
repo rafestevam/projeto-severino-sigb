@@ -1,11 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
+import { extrairMensagem } from '@/services/erros'
+import { somenteDigitos } from '@/utils/cpf'
 
 interface LeitorOut {
   id: string
   nome: string
   ativo: boolean
+  status: 'ativo' | 'pendente'
 }
 
 interface ExemplarOut {
@@ -21,6 +24,7 @@ interface ExemplarOut {
  *
  * Fluxo:
  *   1. buscarLeitor(cpf) → popula `leitor` ou `erroLeitor`
+ *      1a. leitor pendente (pré-cadastro do OPAC) → ativarLeitor()
  *   2. buscarExemplar(codigoQr) → popula `exemplar` ou `erroExemplar`
  *   3. confirmarCheckout() → POST /api/emprestimos; reseta estado
  */
@@ -38,10 +42,26 @@ export const useCheckoutStore = defineStore('checkout', () => {
     leitor.value = null
     loading.value = true
     try {
-      const response = await api.get<LeitorOut>('/leitores', { params: { cpf } })
+      const response = await api.get<LeitorOut>('/leitores', {
+        params: { cpf: somenteDigitos(cpf) },
+      })
       leitor.value = response.data
     } catch (err: unknown) {
-      erroLeitor.value = _extrairMensagem(err, 'Leitor não encontrado para o CPF informado.')
+      erroLeitor.value = extrairMensagem(err, 'Leitor não encontrado para o CPF informado.')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function ativarLeitor(): Promise<void> {
+    if (!leitor.value) return
+    erroLeitor.value = null
+    loading.value = true
+    try {
+      const response = await api.patch<LeitorOut>(`/leitores/${leitor.value.id}/ativar`)
+      leitor.value = response.data
+    } catch (err: unknown) {
+      erroLeitor.value = extrairMensagem(err, 'Não foi possível ativar o leitor.')
     } finally {
       loading.value = false
     }
@@ -55,7 +75,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
       const response = await api.get<ExemplarOut>(`/exemplares/by-qr/${codigoQr}`)
       exemplar.value = response.data
     } catch (err: unknown) {
-      erroExemplar.value = _extrairMensagem(err, 'Exemplar não encontrado para o código QR.')
+      erroExemplar.value = extrairMensagem(err, 'Exemplar não encontrado para o código QR.')
     } finally {
       loading.value = false
     }
@@ -73,7 +93,7 @@ export const useCheckoutStore = defineStore('checkout', () => {
       sucesso.value = true
       resetar()
     } catch (err: unknown) {
-      erroCheckout.value = _extrairMensagem(err, 'Erro ao confirmar empréstimo.')
+      erroCheckout.value = extrairMensagem(err, 'Erro ao confirmar empréstimo.')
     } finally {
       loading.value = false
     }
@@ -92,23 +112,6 @@ export const useCheckoutStore = defineStore('checkout', () => {
     leitor, exemplar,
     erroLeitor, erroExemplar, erroCheckout,
     loading, sucesso,
-    buscarLeitor, buscarExemplar, confirmarCheckout, resetar,
+    buscarLeitor, ativarLeitor, buscarExemplar, confirmarCheckout, resetar,
   }
 })
-
-function _extrairMensagem(err: unknown, fallback: string): string {
-  if (
-    err &&
-    typeof err === 'object' &&
-    'response' in err &&
-    err.response &&
-    typeof err.response === 'object' &&
-    'data' in err.response &&
-    err.response.data &&
-    typeof err.response.data === 'object' &&
-    'detail' in err.response.data
-  ) {
-    return String((err.response.data as Record<string, unknown>).detail)
-  }
-  return fallback
-}

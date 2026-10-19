@@ -10,7 +10,7 @@ import os
 
 import httpx
 
-from app.adapters.api.schemas.isbn_metadata import IsbnMetadataOut
+from app.domain.entities.metadados_isbn import MetadadosIsbn
 from app.domain.gateways.isbn_gateway import IsbnGateway
 
 _OPEN_LIBRARY_URL = "https://openlibrary.org/api/books"
@@ -20,18 +20,35 @@ _CBL_URL = "https://isbn-search-br.search.windows.net/indexes/isbn-index/docs"
 _TIMEOUT = 5.0
 
 
+def _texto_open_library(valor: object) -> str | None:
+    """Open Library devolve textos ora como string, ora como {"type": ..., "value": ...}."""
+    if isinstance(valor, dict):
+        valor = valor.get("value") or valor.get("text")
+    return str(valor) if valor else None
+
+
+def _extrair_sinopse_open_library(book: dict) -> str | None:
+    notas = _texto_open_library(book.get("notes"))
+    if notas:
+        return notas
+    excerpts = book.get("excerpts")
+    if isinstance(excerpts, list) and excerpts:
+        return _texto_open_library(excerpts[0])
+    return None
+
+
 class IsbnGatewayImpl(IsbnGateway):
     """Fetches ISBN metadata from Open Library, Google Books and CBL in cascade."""
 
     def __init__(self, http_client: httpx.AsyncClient) -> None:
         self._client = http_client
 
-    async def buscar(self, isbn: str) -> IsbnMetadataOut | None:
+    async def buscar(self, isbn: str) -> MetadadosIsbn | None:
         """
         Query each source in order and return the first successful result.
 
         Returns:
-            IsbnMetadataOut if any source returned metadata, None otherwise.
+            MetadadosIsbn if any source returned metadata, None otherwise.
         """
         result = await self._buscar_open_library(isbn)
         if result is not None:
@@ -51,7 +68,7 @@ class IsbnGatewayImpl(IsbnGateway):
 
     # ── private source queries ──────────────────────────────────────────────
 
-    async def _buscar_open_library(self, isbn: str) -> IsbnMetadataOut | None:
+    async def _buscar_open_library(self, isbn: str) -> MetadadosIsbn | None:
         """Query Open Library Books API."""
         try:
             response = await self._client.get(
@@ -70,7 +87,7 @@ class IsbnGatewayImpl(IsbnGateway):
 
         return self._map_open_library(book)
 
-    async def _buscar_google_books(self, isbn: str) -> IsbnMetadataOut | None:
+    async def _buscar_google_books(self, isbn: str) -> MetadadosIsbn | None:
         """Query Google Books API."""
         try:
             response = await self._client.get(
@@ -90,7 +107,7 @@ class IsbnGatewayImpl(IsbnGateway):
         volume_info = items[0].get("volumeInfo", {})
         return self._map_google_books(volume_info)
 
-    async def _buscar_cbl(self, isbn: str, api_key: str) -> IsbnMetadataOut | None:
+    async def _buscar_cbl(self, isbn: str, api_key: str) -> MetadadosIsbn | None:
         """Query CBL (Câmara Brasileira do Livro) ISBN search API."""
         try:
             response = await self._client.get(
@@ -117,8 +134,8 @@ class IsbnGatewayImpl(IsbnGateway):
     # ── response mappers ────────────────────────────────────────────────────
 
     @staticmethod
-    def _map_open_library(book: dict) -> IsbnMetadataOut:
-        """Map Open Library book data to IsbnMetadataOut."""
+    def _map_open_library(book: dict) -> MetadadosIsbn:
+        """Map Open Library book data to MetadadosIsbn."""
         autores: list[str] | None = None
         raw_authors = book.get("authors")
         if raw_authors:
@@ -143,17 +160,18 @@ class IsbnGatewayImpl(IsbnGateway):
         if cover:
             capa_url = cover.get("large") or cover.get("medium") or cover.get("small")
 
-        return IsbnMetadataOut(
+        return MetadadosIsbn(
             titulo=book.get("title"),
             autores=autores or None,
             editora=editora,
             ano=ano,
             capa_url=capa_url,
+            sinopse=_extrair_sinopse_open_library(book),
         )
 
     @staticmethod
-    def _map_google_books(volume_info: dict) -> IsbnMetadataOut:
-        """Map Google Books volumeInfo to IsbnMetadataOut."""
+    def _map_google_books(volume_info: dict) -> MetadadosIsbn:
+        """Map Google Books volumeInfo to MetadadosIsbn."""
         autores = volume_info.get("authors") or None
 
         ano: int | None = None
@@ -168,17 +186,18 @@ class IsbnGatewayImpl(IsbnGateway):
         if image_links:
             thumbnail = image_links.get("thumbnail") or image_links.get("smallThumbnail")
 
-        return IsbnMetadataOut(
+        return MetadadosIsbn(
             titulo=volume_info.get("title"),
             autores=autores,
             editora=volume_info.get("publisher"),
             ano=ano,
             capa_url=thumbnail,
+            sinopse=volume_info.get("description") or None,
         )
 
     @staticmethod
-    def _map_cbl(record: dict) -> IsbnMetadataOut:
-        """Map CBL record to IsbnMetadataOut."""
+    def _map_cbl(record: dict) -> MetadadosIsbn:
+        """Map CBL record to MetadadosIsbn."""
         autores: list[str] | None = None
         raw_authors = record.get("Authors") or record.get("authors")
         if isinstance(raw_authors, list) and raw_authors:
@@ -191,7 +210,7 @@ class IsbnGatewayImpl(IsbnGateway):
         if year_str.isdigit() and len(year_str) == 4:
             ano = int(year_str)
 
-        return IsbnMetadataOut(
+        return MetadadosIsbn(
             titulo=record.get("Title") or record.get("title"),
             autores=autores,
             editora=record.get("Publisher") or record.get("publisher"),

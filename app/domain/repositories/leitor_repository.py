@@ -18,3 +18,14 @@ class LeitorRepository(ABC):
 
     @abstractmethod
     async def save(self, leitor: Leitor) -> Leitor: ...
+
+    @abstractmethod
+    async def ativar(self, id: UUID) -> Leitor | None: ...
+
+    @abstractmethod
+    async def get_by_email(self, email: str) -> Leitor | None:
+        """Busca sem diferenciar maiúsculas/minúsculas.
+
+        Retorna None se nenhum leitor ou mais de um usar o e-mail: um vínculo
+        ambíguo não pode identificar quem está autenticado.
+        """

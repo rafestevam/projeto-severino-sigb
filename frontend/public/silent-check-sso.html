@@ -1,0 +1,10 @@
+<!doctype html>
+<html>
+  <body>
+    <script>
+      // Usado pelo keycloak-js (onLoad: 'check-sso') para verificar a sessão SSO
+      // num iframe oculto, sem redirecionar o visitante anônimo do OPAC.
+      parent.postMessage(location.href, location.origin)
+    </script>
+  </body>
+</html>

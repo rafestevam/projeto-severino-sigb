@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import DateTime, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,3 +29,4 @@ class ObraModel(Base):
     total_emprestimos: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+    sinopse: Mapped[str | None] = mapped_column(Text, nullable=True)
