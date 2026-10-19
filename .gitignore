@@ -1,6 +1,7 @@
 devplan/
 devplan/**
 .bob/
+.claude/
 
 
 # Environment — never commit real secrets
@@ -13,6 +14,7 @@ __pycache__/
 .venv/
 
 AGENTS.md
+CLAUDE.md
 
 # Frontend
 frontend/node_modules/
